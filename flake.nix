@@ -11,22 +11,31 @@
     devShells.x86_64-linux = let
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
       inself = self.devShells.x86_64-linux;
+      myShell = input@{
+          name,
+          buildInputs ? [],
+          toShellName ? n: "${n}-shell",
+          shellHook ? { shellName, ... }: ''
+            export PS1="\n\[\033[1;32m\][${shellName}: \w]\n\$\[\033[0m\] "
+            export PURE="$([[ $IN_NIX_SHELL = 'pure' ]] && echo 1 || echo 0)"
+            echo "PURE=$PURE"
+            echo -n '>> Welcome to ${shellName}! <<'
+          '',
+        }: pkgs.mkShell {
+          name = toShellName name;
+
+          buildInputs = buildInputs;
+
+          shellHook = shellHook
+            (input // { shellName = toShellName name; });
+        };
     in {
       default = inself.julia;
 
-      julia = pkgs.mkShell rec {
-        name = "Julia-shell";
+      julia = myShell {
+        name = "Julia";
+        buildInputs = with pkgs; [ julia ];
 
-        buildInputs = with pkgs; [
-          julia
-        ];
-
-        shellHook = ''
-          export PS1="\n\[\033[1;32m\][${name}: \w]\n\$\[\033[0m\] "
-          export PURE="$([[ $IN_NIX_SHELL = 'pure' ]] && echo 1 || echo 0)"
-          echo "PURE=$PURE"
-          echo -n '>> Welcome to ${name}! <<'
-        '';
       };
     };
 
