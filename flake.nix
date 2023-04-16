@@ -35,7 +35,11 @@
       julia = myShell {
         name = "Julia";
         buildInputs = with pkgs; [ julia ];
+      };
 
+      j = myShell {
+        name = "j";
+        buildInputs = with pkgs; [ j ];
       };
     };
 
