@@ -1,2 +1,6 @@
 *.out
 temp/
+
+# zig stuff
+zig-cache/
+zig-out/
