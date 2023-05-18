@@ -41,6 +41,11 @@
               name = "j";
               buildInputs = with pkgs; [ j ];
             };
+
+            slides = myShell {
+              name = "slides";
+              buildInputs = with pkgs; [ slides ];
+            };
           };
       });
 }

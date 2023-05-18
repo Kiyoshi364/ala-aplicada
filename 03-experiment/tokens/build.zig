@@ -22,19 +22,7 @@ pub fn build(b: *std.build.Builder) void {
     const lib2data_step = b.step("lib2data", "Walk the stdlib and write .txt's with data");
     lib2data_step.dependOn(&run_lib2data.step);
 
-    const data2j = b.addExecutable("data2j", "src/data2j.zig");
-    data2j.setTarget(target);
-    data2j.setBuildMode(mode);
-    data2j.install();
-
-    const run_data2j = data2j.run();
-    run_data2j.step.dependOn(&data2j.step);
-
-    const data2j_step = b.step("data2j", "Take .txt's and spit J datafile");
-    data2j_step.dependOn(&run_data2j.step);
-
-    const run_step = b.step("run", "Run everything");
+    const run_step = b.step("run", "Run lib2data");
     run_step.dependOn(b.getInstallStep());
     run_step.dependOn(lib2data_step);
-    run_step.dependOn(data2j_step);
 }

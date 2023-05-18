@@ -168,7 +168,6 @@ fn traverse(
         const old_len = tk_count.items.len;
         tk_count.clearRetainingCapacity();
         tk_count.appendNTimesAssumeCapacity(0, old_len);
-        break;
     }
 }
 

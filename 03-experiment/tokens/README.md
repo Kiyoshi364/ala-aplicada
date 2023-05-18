@@ -22,9 +22,8 @@ Precisamos de um `zig` na versão `0.10.*`
 Lembre-se de dar `git submodule update` antes
 (talvez `--init` é necessário).
 
-Temos 3 comandos interessantes:
+Temos 2 comandos interessantes (eles fazem a mesma coisa):
 ```console
 $ zig build lib2data # Anda pelos arquivos e gera os *.txt
-$ zig build data2j   # Usa os *.txt para gerar os *.ijs
-$ zig build run      # Roda os dois anteriores
+$ zig build run      # Roda o anterior
 ```
