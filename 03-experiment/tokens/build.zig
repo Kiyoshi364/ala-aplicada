@@ -11,24 +11,30 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
-    const exe = b.addExecutable("tokens", "src/main.zig");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.install();
+    const lib2data = b.addExecutable("lib2data", "src/lib2data.zig");
+    lib2data.setTarget(target);
+    lib2data.setBuildMode(mode);
+    lib2data.install();
 
-    const run_cmd = exe.run();
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    const run_lib2data = lib2data.run();
+    run_lib2data.step.dependOn(&lib2data.step);
 
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    const lib2data_step = b.step("lib2data", "Walk the stdlib and write .txt's with data");
+    lib2data_step.dependOn(&run_lib2data.step);
 
-    const exe_tests = b.addTest("src/main.zig");
-    exe_tests.setTarget(target);
-    exe_tests.setBuildMode(mode);
+    const data2j = b.addExecutable("data2j", "src/data2j.zig");
+    data2j.setTarget(target);
+    data2j.setBuildMode(mode);
+    data2j.install();
 
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&exe_tests.step);
+    const run_data2j = data2j.run();
+    run_data2j.step.dependOn(&data2j.step);
+
+    const data2j_step = b.step("data2j", "Take .txt's and spit J datafile");
+    data2j_step.dependOn(&run_data2j.step);
+
+    const run_step = b.step("run", "Run everything");
+    run_step.dependOn(b.getInstallStep());
+    run_step.dependOn(lib2data_step);
+    run_step.dependOn(data2j_step);
 }
