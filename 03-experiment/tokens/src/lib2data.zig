@@ -22,7 +22,7 @@ pub fn main() !void {
         os.exit(1);
     };
 
-    var arr_list = try std.ArrayList([]const u8).initCapacity(malloc, tag_len);
+    var arr_list = try std.ArrayList([]const u8).initCapacity(malloc, id_start);
 
     const state = State{
         .matrix = try cwd.createFile("matrix.txt", .{}),
@@ -116,14 +116,15 @@ fn traverse(
 
     var tk_count = try std.ArrayList(usize).initCapacity(
         alloc,
-        2*tag_len,
+        2*id_start,
     );
     defer tk_count.deinit();
-    tk_count.appendNTimesAssumeCapacity(0, tag_len);
+    tk_count.appendNTimesAssumeCapacity(0, id_start);
 
     var walker = try itdir.walk(alloc);
     defer walker.deinit();
     while (try walker.next()) |entry| {
+        std.debug.assert(tk_count.items.len == id_start + state.id_list.items.len);
         if (entry.kind != .File) {
             continue;
         }
@@ -175,6 +176,7 @@ fn tokenize(buffer: [:0]const u8, state: State, tk_count: *std.ArrayList(usize))
     var tokenizer = Tokenizer.init(buffer);
     var tk = tokenizer.next();
     while (tk.tag != .eof) : (tk = tokenizer.next()) {
+        std.debug.assert(tk_count.items.len == id_start + state.id_list.items.len);
         if (token_tag_to_id(tk.tag)) |index| {
             tk_count.items[index] += 1;
         } else if (tk.tag == .identifier) {
@@ -183,7 +185,7 @@ fn tokenize(buffer: [:0]const u8, state: State, tk_count: *std.ArrayList(usize))
                 tk_count.items[index] += 1;
             } else {
                 const id_i = try state.add_id(id);
-                std.debug.assert(tk_count.items.len == tag_len + id_i);
+                std.debug.assert(tk_count.items.len == id_start + id_i);
                 try tk_count.append(1);
             }
         } else {
