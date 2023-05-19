@@ -179,15 +179,6 @@ fn tokenize(buffer: [:0]const u8, state: State, tk_count: *std.ArrayList(usize))
         std.debug.assert(tk_count.items.len == id_start + state.id_list.items.len);
         if (token_tag_to_id(tk.tag)) |index| {
             tk_count.items[index] += 1;
-        } else if (tk.tag == .identifier) {
-            const id = buffer[tk.loc.start..tk.loc.end];
-            if (state.find_id(id)) |index| {
-                tk_count.items[index] += 1;
-            } else {
-                const id_i = try state.add_id(id);
-                std.debug.assert(tk_count.items.len == id_start + id_i);
-                try tk_count.append(1);
-            }
         } else {
             const should_ignore = for (tags_to_ignore) |ig_tag| {
                 if (ig_tag == tk.tag) {
