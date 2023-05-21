@@ -20,9 +20,4 @@ format2file =. ('.gen.ijs' <@,~ [) (1!:2)~ (fmtU , LF , fmtS , LF , LF ,~ fmtV)
 
 'normal' format2file normalsvd =: svd matrix
 
-centered =: (] -"1 (+/ % #)) matrix
-
-NB. Isso deve retornar 1 para indicar que "está centralizada"
-NB. ([: *./ 1e_10 >&| +/ % #) centered
-
 'center' format2file centeredsvd =: svd centered
