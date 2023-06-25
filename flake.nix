@@ -46,6 +46,14 @@
               name = "slides";
               buildInputs = with pkgs; [ slides ];
             };
+
+            latex = myShell {
+              name = "latex";
+              buildInputs = with pkgs; [
+                texlive.combined.scheme-small
+                zathura
+              ];
+            };
           };
       });
 }

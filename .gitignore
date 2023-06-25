@@ -6,6 +6,10 @@ temp/
 03-experiment/tokens/tokens.txt
 03-experiment/tokens/docs.txt
 
+# latex stuff
+*.aux
+*.log
+
 # zig stuff
 zig-cache/
 zig-out/
