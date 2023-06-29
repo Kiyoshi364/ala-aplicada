@@ -1,0 +1,322 @@
+\documentclass{article}
+
+\usepackage[a4paper]{geometry}
+
+\usepackage[brazil]{babel}
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{multicol}
+
+\usepackage{ifthen}
+
+\newcommand{\R}{\mathbb{R}}
+
+\DeclareMathOperator*{\cond}{cond}
+
+% noindent EVERYWHERE
+\setlength{\parindent}{0pt}
+
+\newenvironment{question}
+    {\medskip\bfseries\large}
+    {\medskip}
+
+\newcounter{exe-list}
+\newenvironment{exe-list}
+    {\begin{list}{(\alph{exe-list})}{\usecounter{exe-list}}}
+    {\end{list}}
+
+\newenvironment{exe}[2][Sala]
+    {\bigskip\noindent\par\ifthenelse{\equal{#1}{}}%
+        {\textbf{\LARGE #2}}%
+        {\textbf{\LARGE #1~#2}}%
+    \medskip\noindent\par}
+    {\bigskip}
+
+\newcommand{\todo}[1]{\textbf{TODO:} {\itshape #1}}
+
+\title{Lista de Revisão}
+\author{Nome -- DRE}
+\date{Álgebra Linear Aplicada - 2023.1}
+
+\begin{document}
+\maketitle
+
+\begin{exe}{1}
+    \begin{question}
+        Calcule:
+        \[
+            \min_x \left\|
+                a - x \; b
+            \right\|^2
+        \]
+        onde:
+        \[
+            a = \begin{bmatrix}
+                a_0 \\ a_1 \\ a_2
+            \end{bmatrix}
+            \qquad\text{,}\qquad
+            b = \begin{bmatrix}
+                1 \\ 1 \\ 1
+            \end{bmatrix}
+            \qquad\text{e}\qquad
+            a_0, a_1, a_2, x \in \R
+        \]
+    \end{question}
+\end{exe}
+
+\begin{exe}{2}
+    \begin{question}
+        Calcule:
+        \[
+            \min_x \left\|
+                a - x \; b
+            \right\|^2
+        \]
+        onde:
+        \[
+            a, b \in \R^n
+            \qquad\text{e}\qquad
+            x \in \R
+        \]
+    \end{question}
+\end{exe}
+
+\begin{exe}{3}
+    \begin{question}
+        (Regressão Rigde) Calcule:
+        \[
+            \min_x \left\|
+                A \; x - b
+            \right\|^2
+            + \lambda \; \|x\|^2
+        \]
+        onde:
+        \[
+            A \in \R^{m \times n}
+            \qquad\text{,}\qquad
+            b \in \R^m
+            \qquad\text{,}\qquad
+            x \in \R^n
+            \qquad\text{e}\qquad
+            \lambda \in \R
+        \]
+    \end{question}
+\end{exe}
+
+\begin{exe}{4}
+    \begin{question}
+        Se matrix \(A \in \R^{N \times N}\)
+        tem condicionamento \(10^3\).
+        Qual é condicionamento da matriz \(A^T A\)?
+        O novo condicionamento é pior ou melhor
+        do que a de \(A\) para se usar no computador?
+
+        \medskip
+
+        Lembrete: \(\cond(A) = \frac{\sigma_1}{\sigma_N}\)
+    \end{question}
+\end{exe}
+
+\begin{exe}{5}
+    \begin{question}
+        Qual seria a saída do algorítmo K-means
+        na notação matricial para esse conjunto de pontos
+        com \(K = 2\)?
+        \begin{multicols}{2} \begin{itemize}
+            \item[] \(a_1 := (0, 0)\)
+            \item[] \(a_2 := (0, 1)\)
+            \item[] \(a_3 := (8, 4)\)
+            \item[] \(a_4 := (-3, 0)\)
+            \item[] \(a_5 := (9, 3)\)
+        \end{itemize} \end{multicols}
+    \end{question}
+\end{exe}
+
+\begin{exe}{6}
+    \begin{question}
+        O float do seu computador tem erro de \(10^{-8}\)
+        e você só pode cometer erros na segunda casa decimal.
+        Qual é um condicionamento de \(A\)
+        problemático para você?
+    \end{question}
+\end{exe}
+
+\begin{exe}{7}
+    \begin{question}
+        Como os pontos \(a_1, \dots, a_{10}\)
+        estão distribuídos em \(\R^2\),
+        se o seu dendograma é:
+
+        \todo{incluir desenho}
+    \end{question}
+\end{exe}
+
+\begin{exe}{8}
+    \begin{question}
+        (Coeficiente de Rayleign) Calcule:
+        \[
+            \max_x \frac{ x^T A x }{ x^T x }
+        \]
+        onde:
+        \[
+            A \in \R^{n \times n}
+            \qquad\text{,}\qquad
+            A = A^T
+            \qquad\text{e}\qquad
+            x \in \R^n
+        \]
+    \end{question}
+\end{exe}
+
+\begin{exe}[Lista]{1}
+    \begin{question}
+        Num país politicamente instável,
+        \(30\%\) dos defensores da república
+        passam a apoiar a monarquia a cada ano e
+        \(20\%\) dos defensores da monarquia
+        passam a apoiar a república a cada ano.
+        Portanto, denotando por \(r_l\) e \(m_k\)
+        o número de republicanos e monarquistas,
+        respectivamente, no ano k.
+        \begin{exe-list}
+            \item
+                Qual é o código para calcular
+                \(r_k\) e \(m_k\)?
+            \item
+                Sabendo que hoje metade da população
+                apoia a república,
+                em 10 anos
+                qual será o percentual que apoia a república?
+            \item
+                A longo prazo qual será
+                o percentual de republicanos e monarquistas?
+        \end{exe-list}
+    \end{question}
+\end{exe}
+
+\begin{exe}[Lista]{2}
+    \begin{question}
+        Sequência de Fibonacci. \medskip\noindent\par
+        A sequência de Fibonacci
+        é definida pelas fórmulas:
+        \begin{align*}
+            F_0 &= 0 \\
+            F_1 &= 1 \\
+            F_{t+1} &= F_t + F_{t-1}
+        \end{align*}
+        Os \(13\) primeiros números da sequência são
+        \(0, 1, 1, 2, 3, 5, 6, 13, 21, 34, 55, 89, 144\).
+
+        Esta famosa sequência tem uma profunda conexão
+        com o número irracional \(\phi\),
+        conhecido como Proporção Áurea.
+        Esta proporção possui a seguinte propriedade geométrica:
+
+        \todo{incluir desenho}
+        \[
+            \frac{a}{b} = \phi = \frac{a+b}{a}
+        \]
+        \begin{exe-list}
+            \item
+                Seja
+                \[
+                    v = \begin{bmatrix}
+                        F_t \\ F_{t+1}
+                    \end{bmatrix}
+                \]
+                um vetor cuja primeira coordenada é
+                um elemento da sequência e
+                a segunda coordenada é o elemento seguinte.
+                Determine qual é a matriz \(A\) que
+                avança o vetor \(v\) ao longo da sequência,
+                ou seja,
+                \[
+                    A \; v
+                    = A \; \begin{bmatrix}
+                        F_t \\ F_{t+1}
+                    \end{bmatrix}
+                    = \begin{bmatrix}
+                        F_{t+1} \\ F_{t+2}
+                    \end{bmatrix}
+                \]
+            \item
+                Determine os autovetores e autovalores
+                da matriz \(A\).
+                Sabendo que o resultado da aplicação repetida
+                de uma transformação linear
+                tende ao autovetor de maior autovalor associado
+                daquela transformação
+                (\emph{Método da Potência}),
+                escreva em Português o que
+                os autovetores e autovalores nos dizem
+                sobre a Sequência de Fibonacci e
+                sua relação com a Proporção Áurea.
+            \item
+                Dada a lista de números
+                da Sequência de Fibonacci acima,
+                confira se as conclusões às quais você chegou
+                no item anterior se verificam.
+        \end{exe-list}
+    \end{question}
+\end{exe}
+
+\begin{exe}[Lista]{3}
+    \begin{question}
+        População de bactérias. \medskip\noindent\par
+        A população de uma certa espécie de bactéria
+        pode ser compreendida da seguinte maneira.
+        Existem bactérias novas, maduras e velhas.
+        A cada mês:
+        \begin{list}{\(\bullet\) (\arabic{exe-list})}{\usecounter{exe-list}}
+            \addtocounter{exe-list}{-1}
+            \item
+                \(80\%\) das bactérias novas
+                chegam à maturidade, e
+                \(20\%\) morrem;
+            \item
+                \(50\%\) das bactérias maduras
+                tornam-se velhas, e
+                \(50\%\) morrem;
+            \item
+                \(100\%\) das bactérias velhas morrem;
+            \item
+                Uma a cada duas bactérias maduras
+                geram uma nova bactéria;
+            \item
+                Uma a cada cinco bactérias velhas
+                geram uma nova bactéria.
+        \end{list}
+
+        \begin{exe-list}
+            \item
+                Modele o sistema populacional descrito acima --
+                ou seja, determine o significado de
+                cada coordenada do vetor que representa a população
+                em um dado mês,
+                e a matriz que representa
+                a transição de um mês para o seguinte.
+        \end{exe-list}
+    \end{question}
+\end{exe}
+
+\begin{exe}[Lista]{8}
+    \begin{question}
+        Sejam
+        \[
+            x = \begin{bmatrix}
+                0 \\ 1
+            \end{bmatrix}
+            \qquad\text{e}\qquad
+            A = \begin{bmatrix}
+                2 & 1 \\ 1 & 2
+            \end{bmatrix}
+        \]
+        Determine uma aproximação para \(\frac{z_1}{z_2}\),
+        tal que \(z = A^{1 \, 000 \, 000} \; x\).
+    \end{question}
+\end{exe}
+
+\end{document}
