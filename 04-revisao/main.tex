@@ -8,6 +8,8 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 
+\usepackage{graphicx}
+
 \usepackage{multicol}
 
 \usepackage{ifthen}
@@ -36,6 +38,7 @@
     {\bigskip}
 
 \newcommand{\todo}[1]{\textbf{TODO:} {\itshape #1}}
+\newcommand{\note}[1]{(\textbf{Nota:} {\itshape #1})}
 
 \newcommand{\hashi}{Daniel Kiyoshi Hashimoto Vouzella de Andrade}
 \newcommand{\dre}{119025937}
@@ -125,7 +128,7 @@
             - 2 \; a_0 \; a_1
             - 2 \; a_0 \; a_2
             - 2 \; a_1 \; a_2
-            }{3} \\
+            }{3}
     \end{align*}
 \end{exe}
 
@@ -169,7 +172,7 @@
             + \left(\frac{b^T a}{b^T b}\right)^2 \; b^T b \\
         &a^T a - 2 \; \frac{(b^T a)^2}{b^T b}
             + \frac{(b^T a)^2}{b^T b} \\
-        &a^T a - \frac{(b^T a)^2}{b^T b} \\
+        &a^T a - \frac{(b^T a)^2}{b^T b}
     \end{align*}
 \end{exe}
 
@@ -211,7 +214,7 @@
         &2 \; A^T A \; x - 2 \; A^T b + 2 \; \lambda \; x = 0 \\
         &A^T A \; x - A^T b + \lambda \; x = 0 \\
         &A^T A \; x + \lambda \; x = A^T b \\
-        &(A^T A + \lambda \; I) \; x = A^T b \\
+        &(A^T A + \lambda \; I) \; x = A^T b
     \end{align*}
 
     Agora basta resolver o sistema linear.
@@ -236,7 +239,7 @@
         &= V^{TT} \; \Sigma^T \; U^T \; U \; \Sigma \; V^T \\
         &= V \; \Sigma^T \; \Sigma \; V^T \\
         &= V \; \Sigma \; \Sigma \; V^T \\
-        A^T A &= V \; \Sigma^2 \; V^T \\
+        A^T A &= V \; \Sigma^2 \; V^T
     \end{align*}
 
     Como \(V\) é uma matriz ortonormal e
@@ -299,7 +302,7 @@
         cond + err &\ge prec \\
         cond - 2 &\ge -8 \\
         cond &\ge - 8 + 2 \\
-        cond &\ge - 6 \\
+        cond &\ge - 6
     \end{align*}
 
     Se \(\cond(A) \ge 10^{-6}\), fica ruim.
@@ -314,7 +317,9 @@
         \todo{incluir desenho}
     \end{question}
 
-    \todo{asdf}
+    \begin{center}
+        \includegraphics[width=.9\textwidth]{images/q7.jpg}
+    \end{center}
 \end{exe}
 
 \begin{exe}{8}
@@ -345,10 +350,57 @@
                 - 2 \; (x^T A \; x) \; x
             }{ (x^T x)^2 } = 0 \\
         & (x^T x) \; A \; x - (x^T A \; x) \; x = 0 \\
-        & ((x^T x) \; A - (x^T A \; x) \; I) \; x = 0 \\
+        & ((x^T x) \; A - (x^T A \; x) \; I) \; x = 0
     \end{align*}
 
-    \todo{asdf}
+    \note{eu fiz mais um pouco mas parece
+    que não chegou a lugar algum.}
+
+    Como \(A = A^T\), temos os autovalores e
+    seus autovetores associados,
+    respectivamente, \(\lambda_1, \dots, \lambda_n\) e
+    \(b_1, \dots, b_n\),
+    e também que para
+    \(0 < i, j \le n\):
+    se \(i \ne j\), \(b_i^T b_j = 0\) e
+    se \(i = j\), \(b_i^T b_j = 1\).
+    Com isso,
+    podemos escrever \(x\) como combinação linear deles:
+    \[
+        x = \sum_{i=0}^n c_i \; b_i
+        \qquad,\; c_i \in \R
+    \]
+    Dessa forma:
+    \begin{align*}
+        & \left(
+                \left(\left(\sum_{i=0}^n c_i \; b_i\right)^T \left(\sum_{i=0}^n c_i \; b_i\right)\right) \; A
+                - \left(\left(\sum_{i=0}^n c_i \; b_i\right)^T A \; \left(\sum_{i=0}^n c_i \; b_i\right)\right) \; I
+            \right) \; \left(\sum_{i=0}^n c_i \; b_i\right) = 0 \\
+        & \left(
+                \left(\sum_{i=0}^n \sum_{j=0}^n (c_i \; b_i)^T (c_j \; b_j)\right) \; A
+                - \left(\left(\sum_{i=0}^n c_i \; b_i\right)^T \left(\sum_{i=0}^n \lambda_i \; c_i \; b_i\right)\right) \; I
+            \right) \; \left(\sum_{i=0}^n c_i \; b_i\right) = 0 \\
+        & \left(
+                \left(\sum_{i=0}^n \sum_{j=0}^n c_i \; c_j \; {b_i}^T b_j\right) \; A
+                - \left(\sum_{i=0}^n \sum_{j=0}^n (c_i \; b_i)^T (\lambda_j \; c_j \; b_j)\right) \; I
+            \right) \; \left(\sum_{i=0}^n c_i \; b_i\right) = 0 \\
+        & \left(
+                \left(\sum_{i=0}^n c_i^2\right) \; A
+                - \left(\sum_{i=0}^n \sum_{j=0}^n c_i \; \lambda_j \; c_j \; {b_i}^T b_j\right) \; I
+            \right) \; \left(\sum_{i=0}^n c_i \; b_i\right) = 0 \\
+        & \left(
+                \left(\sum_{i=0}^n c_i^2\right) \; A
+                - \left(\sum_{i=0}^n \lambda_i \; c_i^2 \right) \; I
+            \right) \; \left(\sum_{i=0}^n c_i \; b_i\right) = 0 \\
+        &  \left(\sum_{i=0}^n c_i^2\right) \; A \; \left(\sum_{i=0}^n c_i \; b_i\right)
+            - \left(\sum_{i=0}^n \lambda_i \; c_i^2 \right) \; I \; \left(\sum_{i=0}^n c_i \; b_i\right)
+            = 0 \\
+        &  \left(\sum_{i=0}^n c_i^2\right) \; \left(\sum_{i=0}^n \lambda_i \; c_i \; b_i\right)
+            - \left(\sum_{i=0}^n \lambda_i \; c_i^2 \right) \; \left(\sum_{i=0}^n c_i \; b_i\right)
+            = 0 \\
+        &  \left(\sum_{i=0}^n c_i^2\right) \; \left(\sum_{i=0}^n \lambda_i \; c_i \; b_i\right)
+            = \left(\sum_{i=0}^n \lambda_i \; c_i^2 \right) \; \left(\sum_{i=0}^n c_i \; b_i\right)
+    \end{align*}
 \end{exe}
 
 \begin{exe}[Lista]{1}
