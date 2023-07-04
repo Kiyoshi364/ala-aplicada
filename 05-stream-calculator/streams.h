@@ -1,6 +1,8 @@
 #ifndef _STREAMS_H
 #define _STREAMS_H
 
+#include "hashi.h"
+
 enum _StreamType{
     ZERO_STREAM,
     NUMBER_STREAM,
@@ -18,6 +20,9 @@ typedef struct {
     union {
         uword data;
         fword fdata;
+    };
+    union {
+        uword data2;
     };
 } Stream;
 CASSERT(sizeof(((Stream*)0)->data) == sizeof(((Stream*)0)->fdata), NUMBER_T_FITS_FLOAT);
@@ -43,6 +48,7 @@ static ZeroStream THE_ZERO_STREAM = {
         .typ = { ZERO_STREAM },
         .len = sizeof(THE_ZERO_STREAM),
         .data = 0,
+        .data2 = 0,
     },
 };
 
@@ -53,6 +59,7 @@ void _zerostream_ok(const ZeroStream zs[const static 1]) {
     assert(zs->header.typ.e == ZERO_STREAM);
     assert(zs->header.len == sizeof(ZeroStream));
     assert(zs->header.data == 0);
+    assert(zs->header.data2 == 0);
     assert(zs == &THE_ZERO_STREAM);
 }
 
@@ -71,9 +78,15 @@ void print_ZeroStream(FILE *out, const ZeroStream zs[static 1]) {
 // ==================== NumberStream ====================
 
 inline static
-void _numberstream_ok(NumberStream ns) {
+void _local_numberstream_ok(NumberStream ns) {
     assert(ns.header.typ.e == NUMBER_STREAM);
     assert(ns.header.len == sizeof(NumberStream));
+    assert(ns.header.data2 == 0);
+}
+
+inline static
+void _numberstream_ok(const NumberStream* ns) {
+    _local_numberstream_ok(*ns);
 }
 
 NumberStream local_NumberStream(fword number) {
@@ -82,6 +95,7 @@ NumberStream local_NumberStream(fword number) {
             .typ = { NUMBER_STREAM },
             .len = sizeof(NumberStream),
             .fdata = number,
+            .data2 = 0,
         },
     };
 }
@@ -89,46 +103,46 @@ NumberStream local_NumberStream(fword number) {
 const NumberStream* make_NumberStream(Alloc alloc, fword number) {
     NumberStream *p = ALLOCATE_ONE(alloc, NumberStream);
     assert(p);
-    *p = (NumberStream){
-        .header = (Stream){
-            .typ = { NUMBER_STREAM },
-            .len = sizeof(*p),
-            .fdata = number,
-        },
-    };
+    *p = local_NumberStream(number);
     return p;
 }
 
-NumberStream add_NumberStream(NumberStream a, NumberStream b) {
-    _numberstream_ok(a);
-    _numberstream_ok(b);
-    return (NumberStream){
-        .header = (Stream){
-            .typ = { NUMBER_STREAM },
-            .len = sizeof(NumberStream),
-            .fdata = a.header.fdata + b.header.fdata,
-        },
-    };
+fword local_head_NumberStream(NumberStream stream) {
+    return stream.header.fdata;
 }
 
-void print_NumberStream(FILE *out, NumberStream stream) {
-    assert(stream.header.typ.e == NUMBER_STREAM);
+fword head_NumberStream(const NumberStream stream[static 1]) {
+    return local_head_NumberStream(*stream);
+}
+
+NumberStream add_NumberStream(NumberStream a, NumberStream b) {
+    _local_numberstream_ok(a);
+    _local_numberstream_ok(b);
+    return local_NumberStream(a.header.fdata + b.header.fdata);
+}
+
+void local_print_NumberStream(FILE *out, NumberStream stream) {
+    _local_numberstream_ok(stream);
     fprintf(out, "(Number: %"PRIfPTR")", stream.header.fdata);
+}
+
+void print_NumberStream(FILE *out, const NumberStream stream[static 1]) {
+    local_print_NumberStream(out, *stream);
 }
 
 // ==================== STREAMS ====================
 
-fword head_Stream(Alloc alloc, Stream stream[static 1]) {
+fword head_Stream(Alloc alloc, const Stream stream[static 1]) {
     (void) alloc;
-    uword result = 0;
+    fword result = 0.0;
     switch (stream->typ.e) {
         case ZERO_STREAM: {
-            _zerostream_ok((ZeroStream *) stream);
-            result = 0;
+            _zerostream_ok((const ZeroStream *) stream);
+            result = 0.0;
         } break;
         case NUMBER_STREAM: {
-            _numberstream_ok(*(NumberStream *) stream);
-            result = stream->data;
+            _numberstream_ok((const NumberStream *) stream);
+            result = head_NumberStream((const NumberStream *) stream);
         } break;
         default: {
             fprintf(stderr, "stream->typ.e: %"PRIuPTR"\n", stream->typ.e);
@@ -138,16 +152,16 @@ fword head_Stream(Alloc alloc, Stream stream[static 1]) {
     return result;
 }
 
-const Stream* tail_Stream(Alloc alloc, Stream stream[static 1]) {
+const Stream* tail_Stream(Alloc alloc, const Stream stream[static 1]) {
     (void) alloc;
-    Stream *result = NULL;
+    const Stream *result = NULL;
     switch (stream->typ.e) {
         case ZERO_STREAM: {
-            _zerostream_ok((ZeroStream *) stream);
+            _zerostream_ok((const ZeroStream *) stream);
             result = stream;
         } break;
         case NUMBER_STREAM: {
-            _numberstream_ok(*(NumberStream *) stream);
+            _numberstream_ok((const NumberStream *) stream);
             result = (Stream *) &THE_ZERO_STREAM;
         } break;
         default: {
@@ -172,19 +186,19 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
         case CASE2(ZERO_STREAM, NUMBER_STREAM):
         {
             _zerostream_ok((const ZeroStream *) a);
-            _numberstream_ok(*(const NumberStream *) b);
+            _numberstream_ok((const NumberStream *) b);
             result = b;
         } break;
         case CASE2(NUMBER_STREAM, ZERO_STREAM):
         {
-            _numberstream_ok(*(const NumberStream *) a);
+            _numberstream_ok((const NumberStream *) a);
             _zerostream_ok((const ZeroStream *) b);
             result = a;
         } break;
         case CASE2(NUMBER_STREAM, NUMBER_STREAM):
         {
-            _numberstream_ok(*(NumberStream const *) a);
-            _numberstream_ok(*(NumberStream const *) b);
+            _numberstream_ok((const NumberStream *) a);
+            _numberstream_ok((const NumberStream *) b);
             Stream *tmp = (Stream *) ALLOCATE_ONE(alloc, NumberStream);
             assert(tmp != NULL);
             const NumberStream ns = add_NumberStream(
@@ -209,7 +223,7 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
             print_ZeroStream(out, (const ZeroStream *) stream);
         } break;
         case NUMBER_STREAM: {
-            print_NumberStream(out, *(const NumberStream *) stream);
+            print_NumberStream(out, (const NumberStream *) stream);
         } break;
         default: {
             fprintf(stderr, "stream->typ.e: %"PRIuPTR"\n", stream->typ.e);
