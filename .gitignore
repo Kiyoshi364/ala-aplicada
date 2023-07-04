@@ -6,6 +6,9 @@ temp/
 03-experiment/tokens/tokens.txt
 03-experiment/tokens/docs.txt
 
+# 05-stream-calculator
+05-stream-calculator/main
+
 # latex stuff
 *.aux
 *.log

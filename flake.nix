@@ -54,6 +54,11 @@
                 zathura
               ];
             };
+
+            dot = myShell {
+              name = "dot";
+              buildInputs = with pkgs; [ graphviz ];
+            };
           };
       });
 }
