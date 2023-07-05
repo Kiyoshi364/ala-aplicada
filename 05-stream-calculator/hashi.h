@@ -19,6 +19,8 @@
 #define TODO(...) CASSERT(0, TODO)
 #define RUNTIME_TODO(...) assert(0 && "TODO")
 
+#define ARRAY_SIZE(arr) ((sizeof(arr))/sizeof((arr)[0]))
+
 // int types
 typedef uint8_t u8;
 typedef uint16_t u16;

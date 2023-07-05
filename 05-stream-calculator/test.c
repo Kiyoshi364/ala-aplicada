@@ -4,7 +4,6 @@
 #include "streams.h"
 
 #define EPSILON 1e-16
-#define ARRAY_SIZE(arr) ((sizeof(arr))/sizeof((arr)[0]))
 #define TEST(x) if (!(x))
 #define ON_FIRST_ERR(block) do { \
         if (!first_err) { \
