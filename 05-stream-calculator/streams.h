@@ -69,6 +69,20 @@ void print_N_Streamln(FILE* out, Alloc alloc, const Stream stream[static 1], con
 
 // ==================== GlobalContants ====================
 
+#define DEFAULT_STREAM_CASE(stream) \
+    default: \
+    { \
+        fprintf(stderr, "stream->typ.e: %s\n", S_NAME((stream)->typ.e)); \
+        assert(0 && "Unhandled stream type"); \
+    } break;
+
+#define DEFAULT_STREAM_CASE2(a, b) \
+    default: \
+    { \
+        fprintf(stderr, "a->typ.e: %s b->typ.e: %s\n", S_NAME((a)->typ.e), S_NAME((b)->typ.e)); \
+        assert(0 && "Unhandled stream type"); \
+    } break;
+
 static const char *STREAM_TYPENAME[] = {
     "ZERO",
     "NUMBER",
@@ -254,6 +268,75 @@ const Stream* tail_LazyMulStream(Alloc alloc, const LazyMulStream stream[static 
     return add_Stream(alloc, left, right);
 }
 
+
+// ==================== Dispach ADD ====================
+
+const Stream* add_Number_Stream(Alloc alloc, const NumberStream ns[static 1], const Stream b[static 1]) {
+    const Stream *result = NULL;
+    switch (b->typ.e) {
+        case ZERO_STREAM:
+        {
+            _zerostream_ok((const ZeroStream *) b);
+            result = (const Stream *) ns;
+        } break;
+        case NUMBER_STREAM:
+        {
+            _numberstream_ok((const NumberStream *) b);
+            const fword ha = local_head_NumberStream(*(const NumberStream *) ns);
+            const fword hb = local_head_NumberStream(*(const NumberStream *) b);
+            result = (const Stream *) make_NumberStream(alloc, ha + hb);
+        } break;
+        case LAZY_ADD_STREAM:
+        {
+            _lazyaddstream_ok((const LazyAddStream *) b);
+            result = (const Stream *) make_LazyAddStream(alloc, (const Stream *) ns, b);
+        } break;
+        case LAZY_MUL_STREAM:
+        {
+            _lazymulstream_ok((const LazyMulStream *) b);
+            result = (const Stream *) make_LazyAddStream(alloc, (const Stream *) ns, b);
+        } break;
+        case STREAMTYPE_COUNT:
+        DEFAULT_STREAM_CASE(b);
+    }
+    assert(result != NULL);
+    return result;
+}
+
+// ==================== Dispach MUL ====================
+
+const Stream* mul_Number_Stream(Alloc alloc, const NumberStream ns[static 1], const Stream b[static 1]) {
+    const Stream *result = NULL;
+    switch (b->typ.e) {
+        case ZERO_STREAM:
+        {
+            _zerostream_ok((const ZeroStream *) b);
+            result = b;
+        } break;
+        case NUMBER_STREAM:
+            _numberstream_ok((const NumberStream *) b);
+            const fword ha = local_head_NumberStream(*(const NumberStream *) ns);
+            const fword hb = local_head_NumberStream(*(const NumberStream *) b);
+            result = (const Stream *) make_NumberStream(alloc, ha * hb);
+        {
+        } break;
+        case LAZY_ADD_STREAM:
+        {
+            _lazyaddstream_ok((const LazyAddStream *) b);
+            result = (const Stream *) make_LazyMulStream(alloc, (const Stream *) ns, b);
+        } break;
+        case LAZY_MUL_STREAM:
+        {
+            _lazymulstream_ok((const LazyMulStream *) b);
+            result = (const Stream *) make_LazyMulStream(alloc, (const Stream *) ns, b);
+        } break;
+        case STREAMTYPE_COUNT:
+        DEFAULT_STREAM_CASE(b);
+    }
+    assert(result != NULL);
+    return result;
+}
+
 // ==================== STREAMS ====================
 
 inline static
@@ -355,62 +438,42 @@ const Stream* tail_Stream(Alloc alloc, const Stream stream[static 1]) {
 
 const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]) {
     const Stream *result = NULL;
-    switch CASE2(a->typ.e, b->typ.e) {
-        case CASE2(ZERO_STREAM, ZERO_STREAM):
-        {
-            _zerostream_ok((const ZeroStream *) a);
-            _zerostream_ok((const ZeroStream *) b);
-            result = a;
-        } break;
-        case CASE2(ZERO_STREAM, NUMBER_STREAM):
-        case CASE2(ZERO_STREAM, LAZY_ADD_STREAM):
-        case CASE2(ZERO_STREAM, LAZY_MUL_STREAM):
+    switch (a->typ.e) {
+        case ZERO_STREAM:
         {
             _zerostream_ok((const ZeroStream *) a);
             _stream_ok(b);
             result = b;
         } break;
-        case CASE2(NUMBER_STREAM, ZERO_STREAM):
-        case CASE2(LAZY_ADD_STREAM, ZERO_STREAM):
-        case CASE2(LAZY_MUL_STREAM, ZERO_STREAM):
-        {
-            _stream_ok(a);
-            _zerostream_ok((const ZeroStream *) b);
-            result = a;
-        } break;
-        case CASE2(NUMBER_STREAM, NUMBER_STREAM):
+        case NUMBER_STREAM:
         {
             _numberstream_ok((const NumberStream *) a);
-            _numberstream_ok((const NumberStream *) b);
-            Stream *tmp = (Stream *) ALLOCATE_ONE(alloc, NumberStream);
-            assert(tmp != NULL);
-            const NumberStream ns = add_NumberStream(
-                *(const NumberStream *) a,
-                *(const NumberStream *) b
-            );
-            *tmp = ns.header;
-            result = tmp;
+            result = add_Number_Stream(alloc, (const NumberStream *) a, b);
         } break;
-        case CASE2(NUMBER_STREAM, LAZY_ADD_STREAM):
-        case CASE2(NUMBER_STREAM, LAZY_MUL_STREAM):
-
-        case CASE2(LAZY_ADD_STREAM, NUMBER_STREAM):
-        case CASE2(LAZY_ADD_STREAM, LAZY_ADD_STREAM):
-        case CASE2(LAZY_ADD_STREAM, LAZY_MUL_STREAM):
-
-        case CASE2(LAZY_MUL_STREAM, NUMBER_STREAM):
-        case CASE2(LAZY_MUL_STREAM, LAZY_ADD_STREAM):
-        case CASE2(LAZY_MUL_STREAM, LAZY_MUL_STREAM):
+        // TODO: Try to join (s + number)
+        case LAZY_ADD_STREAM:
+        case LAZY_MUL_STREAM:
         {
             _stream_ok(a);
-            _stream_ok(b);
-            result = (const Stream *) make_LazyAddStream(alloc, a, b);
+            switch (b->typ.e) {
+                case ZERO_STREAM:
+                {
+                    _zerostream_ok((const ZeroStream *) b);
+                    result = a;
+                } break;
+                case NUMBER_STREAM:
+                case LAZY_ADD_STREAM:
+                case LAZY_MUL_STREAM:
+                {
+                    _stream_ok(b);
+                    result = (const Stream *) make_LazyAddStream(alloc, a, b);
+                } break;
+                case STREAMTYPE_COUNT:
+                DEFAULT_STREAM_CASE2(a, b);
+            }
         } break;
-        default:
-        {
-            fprintf(stderr, "a->typ.e: %s b->typ.e: %s\n", S_NAME(a->typ.e), S_NAME(b->typ.e));
-            assert(0 && "Unhandled stream type");
-        } break;
+        case STREAMTYPE_COUNT:
+        DEFAULT_STREAM_CASE2(a, b);
     }
     assert(result != NULL);
     return result;
@@ -418,58 +481,42 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
 
 const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]) {
     const Stream *result = NULL;
-    switch CASE2(a->typ.e, b->typ.e) {
-        case CASE2(ZERO_STREAM, ZERO_STREAM):
-        {
-            _zerostream_ok((const ZeroStream *) a);
-            _zerostream_ok((const ZeroStream *) b);
-            result = a;
-        } break;
-        case CASE2(ZERO_STREAM, NUMBER_STREAM):
-        case CASE2(ZERO_STREAM, LAZY_ADD_STREAM):
-        case CASE2(ZERO_STREAM, LAZY_MUL_STREAM):
+    switch (a->typ.e) {
+        case ZERO_STREAM:
         {
             _zerostream_ok((const ZeroStream *) a);
             _stream_ok(b);
             result = a;
         } break;
-        case CASE2(NUMBER_STREAM, ZERO_STREAM):
-        case CASE2(LAZY_ADD_STREAM, ZERO_STREAM):
-        case CASE2(LAZY_MUL_STREAM, ZERO_STREAM):
-        {
-            _stream_ok(a);
-            _zerostream_ok((const ZeroStream *) b);
-            result = b;
-        } break;
-        case CASE2(NUMBER_STREAM, NUMBER_STREAM):
+        case NUMBER_STREAM:
         {
             _numberstream_ok((const NumberStream *) a);
-            _numberstream_ok((const NumberStream *) b);
-            const fword ha = local_head_NumberStream(*(const NumberStream *) a);
-            const fword hb = local_head_NumberStream(*(const NumberStream *) b);
-            result = (const Stream *) make_NumberStream(alloc, ha * hb);
+            result = mul_Number_Stream(alloc, (const NumberStream *) a, b);
         } break;
-        // TODO: Try to join (number + s) and (s + number)
-        case CASE2(NUMBER_STREAM, LAZY_ADD_STREAM):
-        case CASE2(NUMBER_STREAM, LAZY_MUL_STREAM):
-
-        case CASE2(LAZY_ADD_STREAM, NUMBER_STREAM):
-        case CASE2(LAZY_ADD_STREAM, LAZY_ADD_STREAM):
-        case CASE2(LAZY_ADD_STREAM, LAZY_MUL_STREAM):
-
-        case CASE2(LAZY_MUL_STREAM, NUMBER_STREAM):
-        case CASE2(LAZY_MUL_STREAM, LAZY_ADD_STREAM):
-        case CASE2(LAZY_MUL_STREAM, LAZY_MUL_STREAM):
+        // TODO: Try to join (s * number)
+        case LAZY_ADD_STREAM:
+        case LAZY_MUL_STREAM:
         {
             _stream_ok(a);
-            _stream_ok(b);
-            result = (const Stream *) make_LazyMulStream(alloc, a, b);
+            switch (b->typ.e) {
+                case ZERO_STREAM:
+                {
+                    _zerostream_ok((const ZeroStream *) b);
+                    result = b;
+                } break;
+                case NUMBER_STREAM:
+                case LAZY_ADD_STREAM:
+                case LAZY_MUL_STREAM:
+                {
+                    _stream_ok(b);
+                    result = (const Stream *) make_LazyMulStream(alloc, a, b);
+                } break;
+                case STREAMTYPE_COUNT:
+                DEFAULT_STREAM_CASE2(a, b);
+            }
         } break;
-        default:
-        {
-            fprintf(stderr, "a->typ.e: %s b->typ.e: %s\n", S_NAME(a->typ.e), S_NAME(b->typ.e));
-            assert(0 && "Unhandled stream type");
-        } break;
+        case STREAMTYPE_COUNT:
+        DEFAULT_STREAM_CASE2(a, b);
     }
     assert(result != NULL);
     return result;
@@ -502,11 +549,7 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
             fprintf(out, " *)");
         } break;
         case STREAMTYPE_COUNT:
-        default:
-        {
-            fprintf(stderr, "stream->typ.e: %s\n", S_NAME(stream->typ.e));
-            assert(0 && "Unhandled stream type");
-        } break;
+        DEFAULT_STREAM_CASE(stream);
     }
 }
 
