@@ -14,8 +14,10 @@
     } while (0)
 #define RUN_TEST(test, ctx, errs) {\
         int _local_errs = (test)(ctx); \
-        if (_local_errs > 0) { \
+        if (_local_errs != 0) { \
             fprintf(ctx.out, "Found %d errors in " #test "!\n", _local_errs); \
+        } else { \
+            fprintf(ctx.out, "Test ok (" #test ")\n"); \
         } \
         errs += _local_errs; \
     }
@@ -45,7 +47,7 @@ int test_zero(TestCtx ctx) {
     }
 
     {
-        const fword head = head_Stream(ctx.alloc, (const Stream *) z0);
+        const fword head = head_Stream((const Stream *) z0);
         TEST (head == 0.0) {
             errs += 1;
             ON_FIRST_ERR({
@@ -130,10 +132,9 @@ int test_number(TestCtx ctx) {
 }
 
 int test_lazyadd(TestCtx ctx) {
-    (void) ctx;
     int errs = 0;
     const size_t depths[] = {
-        3, 3
+        3, 3, 3, 3
     };
     const Stream *streams[][3] = {
         {
@@ -144,21 +145,36 @@ int test_lazyadd(TestCtx ctx) {
             (const Stream *) make_NumberStream(ctx.alloc, 10.0),
             (const Stream *) make_ZeroStream(ctx.alloc),
             (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+        }, {
+            (const Stream *) make_LazyAddStream(ctx.alloc,
+                (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+                (const Stream *) make_NumberStream(ctx.alloc, 25.0)
+            ),
+            (const Stream *) make_ZeroStream(ctx.alloc),
+            (const Stream *) make_NumberStream(ctx.alloc, 35.0),
+        }, {
+            (const Stream *) make_LazyMulStream(ctx.alloc,
+                (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+                (const Stream *) make_NumberStream(ctx.alloc, 5.0)
+            ),
+            (const Stream *) make_ZeroStream(ctx.alloc),
+            (const Stream *) make_NumberStream(ctx.alloc, 50.0),
         }
     };
     CASSERT(ARRAY_SIZE(depths) == ARRAY_SIZE(streams), DEPTHS_SIZE_EQ_STREAM_SIZE);
 
     for (size_t i = 0; i < ARRAY_SIZE(streams); i += 1) {
+        int this_errs = 0;
         const Stream *a = streams[i][0];
         const Stream *b = streams[i][1];
-        const Stream *expected = streams[i][2];
-        const Stream *result = add_Stream(ctx.alloc, a, b);
+        const Stream *const expected = streams[i][2];
+        const Stream *const result = add_Stream(ctx.alloc, a, b);
 
         if (depths[i] > 0) {
-            const fword head = head_Stream(ctx.alloc, result);
-            const fword expected_head = head_Stream(ctx.alloc, expected);
+            const fword head = head_Stream(result);
+            const fword expected_head = head_Stream(expected);
             TEST (head - expected_head < EPSILON) {
-                errs += 1;
+                this_errs += 1;
                 ON_FIRST_ERR({
                     fprintf(ctx.out, "Head of the sum of ");
                     debug_Stream(ctx.out, a);
@@ -181,10 +197,10 @@ int test_lazyadd(TestCtx ctx) {
         for (size_t depth = 1; depth < depths[i]; depth += 1) {
             curr = tail_Stream(ctx.alloc, curr);
             expected_curr = tail_Stream(ctx.alloc, expected_curr);
-            const fword head = head_Stream(ctx.alloc, curr);
-            const fword expected_head = head_Stream(ctx.alloc, expected_curr);
+            const fword head = head_Stream(curr);
+            const fword expected_head = head_Stream(expected_curr);
             TEST (head - expected_head < EPSILON) {
-                errs += 1;
+                this_errs += 1;
                 ON_FIRST_ERR({
                     fprintf(ctx.out, "At depth %zu, the head of the sum of ",
                         depth);
@@ -199,6 +215,14 @@ int test_lazyadd(TestCtx ctx) {
                     debug_Streamln(ctx.out, expected_curr);
                 });
             }
+        }
+
+        if (this_errs) {
+            errs += 1;
+            fprintf(ctx.out, "displaying expected stream:\n");
+            print_N_Streamln(ctx.out, ctx.alloc, expected, depths[i]);
+            fprintf(ctx.out, "displaying result stream:\n");
+            print_N_Streamln(ctx.out, ctx.alloc, result, depths[i]);
         }
     }
     return errs;
@@ -223,7 +247,7 @@ int main(void) {
             "Tests failed. Found %d errors!\n", errs);
     } else {
         fprintf(ctx.out,
-            "Ok!\n");
+            "All ok!\n");
     }
     return errs;
 }
