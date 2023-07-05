@@ -3,6 +3,7 @@
 #define STREAM_IMPLEMENTATION
 #include "streams.h"
 
+#define EPSILON 1e-16
 #define ARRAY_SIZE(arr) ((sizeof(arr))/sizeof((arr)[0]))
 #define TEST(x) if (!(x))
 #define ON_FIRST_ERR(block) do { \
@@ -128,10 +129,86 @@ int test_number(TestCtx ctx) {
     return errs;
 }
 
+int test_lazyadd(TestCtx ctx) {
+    (void) ctx;
+    int errs = 0;
+    const size_t depths[] = {
+        3, 3
+    };
+    const Stream *streams[][3] = {
+        {
+            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+            (const Stream *) make_NumberStream(ctx.alloc, 15.0),
+            (const Stream *) make_NumberStream(ctx.alloc, 25.0),
+        }, {
+            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+            (const Stream *) make_ZeroStream(ctx.alloc),
+            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+        }
+    };
+    CASSERT(ARRAY_SIZE(depths) == ARRAY_SIZE(streams), DEPTHS_SIZE_EQ_STREAM_SIZE);
+
+    for (size_t i = 0; i < ARRAY_SIZE(streams); i += 1) {
+        const Stream *a = streams[i][0];
+        const Stream *b = streams[i][1];
+        const Stream *expected = streams[i][2];
+        const Stream *result = add_Stream(ctx.alloc, a, b);
+
+        if (depths[i] > 0) {
+            const fword head = head_Stream(ctx.alloc, result);
+            const fword expected_head = head_Stream(ctx.alloc, expected);
+            TEST (head - expected_head < EPSILON) {
+                errs += 1;
+                ON_FIRST_ERR({
+                    fprintf(ctx.out, "Head of the sum of ");
+                    debug_Stream(ctx.out, a);
+                    fprintf(ctx.out, " and ");
+                    debug_Stream(ctx.out, b);
+                    fprintf(ctx.out, ", namelly ");
+                    debug_Stream(ctx.out, result);
+                    fprintf(ctx.out, ", should be %"PRIfPTR", but is %"PRIfPTR
+                        ". The expected sum is ",
+                        head, expected_head);
+                    debug_Streamln(ctx.out, expected);
+                });
+            }
+        } else {
+            assert(depths[i] > 0);
+        }
+
+        const Stream *curr = result;
+        const Stream *expected_curr = expected;
+        for (size_t depth = 1; depth < depths[i]; depth += 1) {
+            curr = tail_Stream(ctx.alloc, curr);
+            expected_curr = tail_Stream(ctx.alloc, expected_curr);
+            const fword head = head_Stream(ctx.alloc, curr);
+            const fword expected_head = head_Stream(ctx.alloc, expected_curr);
+            TEST (head - expected_head < EPSILON) {
+                errs += 1;
+                ON_FIRST_ERR({
+                    fprintf(ctx.out, "At depth %zu, the head of the sum of ",
+                        depth);
+                    debug_Stream(ctx.out, a);
+                    fprintf(ctx.out, " and ");
+                    debug_Stream(ctx.out, b);
+                    fprintf(ctx.out, ", namelly ");
+                    debug_Stream(ctx.out, curr);
+                    fprintf(ctx.out, ", should be %"PRIfPTR", but is %"PRIfPTR
+                        ". The expected sum is ",
+                        head, expected_head);
+                    debug_Streamln(ctx.out, expected_curr);
+                });
+            }
+        }
+    }
+    return errs;
+}
+
 int test_all(TestCtx ctx) {
     int errs = 0;
     RUN_TEST(test_zero, ctx, errs);
     RUN_TEST(test_number, ctx, errs);
+    RUN_TEST(test_lazyadd, ctx, errs);
     return errs;
 }
 

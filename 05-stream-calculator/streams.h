@@ -6,6 +6,7 @@
 enum _StreamType{
     ZERO_STREAM,
     NUMBER_STREAM,
+    LAZY_ADD_STREAM,
     STREAMTYPE_COUNT,
 };
 
@@ -14,18 +15,23 @@ typedef struct {
 } StreamType;
 CASSERT(STREAMTYPE_COUNT < UWORD_MAX, STREAM_TYPES_FIT);
 
-typedef struct {
+typedef struct _Stream {
     StreamType typ;
     size_t len;
     union {
         uword data;
         fword fdata;
+        const struct _Stream *stream1;
     };
     union {
         uword data2;
+        const struct _Stream *stream2;
     };
 } Stream;
 CASSERT(sizeof(((Stream*)0)->data) == sizeof(((Stream*)0)->fdata), NUMBER_T_FITS_FLOAT);
+CASSERT(sizeof(((Stream*)0)->data) == sizeof(((Stream*)0)->stream1), NUMBER_T_FITS_FLOAT);
+
+CASSERT(sizeof(((Stream*)0)->data2) == sizeof(((Stream*)0)->stream2), NUMBER_T_FITS_FLOAT);
 
 typedef struct {
     Stream header;
@@ -34,6 +40,19 @@ typedef struct {
 typedef struct {
     Stream header;
 } NumberStream;
+
+typedef struct {
+    Stream header;
+} LazyAddStream;
+
+fword head_Stream(Alloc alloc, const Stream stream[static 1]);
+const Stream* tail_Stream(Alloc alloc, const Stream stream[static 1]);
+const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]);
+void print_Stream(FILE* out, const Stream stream[static 1]);
+void print_Streamln(FILE* out, const Stream stream[static 1]);
+void debug_Stream(FILE* out, const Stream stream[static 1]);
+void debug_Streamln(FILE* out, const Stream stream[static 1]);
+void print_N_Stream(FILE* out, Alloc alloc, const Stream stream[static 1], const size_t count);
 
 #endif // _STREAMS_H
 
@@ -130,7 +149,65 @@ void print_NumberStream(FILE *out, const NumberStream stream[static 1]) {
     local_print_NumberStream(out, *stream);
 }
 
+// ==================== LAZY ADD STREAMS ====================
+
+inline static
+void _lazyaddstream_ok(const LazyAddStream* las) {
+    assert(las->header.typ.e == LAZY_ADD_STREAM);
+    assert(las->header.len == sizeof(LazyAddStream));
+}
+
+const LazyAddStream* make_LazyAddStream(Alloc alloc,
+    const Stream a[static 1],
+    const Stream b[static 1]
+) {
+    LazyAddStream *p = ALLOCATE_ONE(alloc, LazyAddStream);
+    assert(p);
+    *p = (LazyAddStream){
+        .header = (Stream){
+            .typ = { LAZY_ADD_STREAM },
+            .len = sizeof(LazyAddStream),
+            .stream1 = a,
+            .stream2 = b,
+        },
+    };
+    return p;
+}
+
+fword head_LazyAddStream(Alloc alloc, const LazyAddStream stream[static 1]) {
+    const Stream header = stream->header;
+    const fword head1 = head_Stream(alloc, header.stream1);
+    const fword head2 = head_Stream(alloc, header.stream2);
+    return head1 + head2;
+}
+
+const Stream* tail_LazyAddStream(Alloc alloc, const LazyAddStream stream[static 1]) {
+    const Stream header = stream->header;
+    const Stream *tail1 = tail_Stream(alloc, header.stream1);
+    const Stream *tail2 = tail_Stream(alloc, header.stream2);
+    return add_Stream(alloc, tail1, tail2);
+}
+
 // ==================== STREAMS ====================
+
+inline static
+void _stream_ok(const Stream stream[static 1]) {
+    switch (stream->typ.e) {
+        case ZERO_STREAM: {
+            _zerostream_ok((const ZeroStream *) stream);
+        } break;
+        case NUMBER_STREAM: {
+            _numberstream_ok((const NumberStream *) stream);
+        } break;
+        case LAZY_ADD_STREAM: {
+            _lazyaddstream_ok((const LazyAddStream *) stream);
+        } break;
+        default: {
+            fprintf(stderr, "stream->typ.e: %"PRIuPTR"\n", stream->typ.e);
+            assert(0 && "Unhandled stream type");
+        } break;
+    }
+}
 
 fword head_Stream(Alloc alloc, const Stream stream[static 1]) {
     (void) alloc;
@@ -184,14 +261,16 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
             result = a;
         } break;
         case CASE2(ZERO_STREAM, NUMBER_STREAM):
+        case CASE2(ZERO_STREAM, LAZY_ADD_STREAM):
         {
             _zerostream_ok((const ZeroStream *) a);
-            _numberstream_ok((const NumberStream *) b);
+            _stream_ok(b);
             result = b;
         } break;
         case CASE2(NUMBER_STREAM, ZERO_STREAM):
+        case CASE2(LAZY_ADD_STREAM, ZERO_STREAM):
         {
-            _numberstream_ok((const NumberStream *) a);
+            _stream_ok(a);
             _zerostream_ok((const ZeroStream *) b);
             result = a;
         } break;
@@ -208,7 +287,15 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
             *tmp = ns.header;
             result = tmp;
         } break;
-        default: {
+        case CASE2(LAZY_ADD_STREAM, NUMBER_STREAM):
+        case CASE2(NUMBER_STREAM, LAZY_ADD_STREAM):
+        {
+            _stream_ok(a);
+            _stream_ok(b);
+            result = (const Stream *) make_LazyAddStream(alloc, a, b);
+        } break;
+        default:
+        {
             fprintf(stderr, "a->typ.e: %"PRIuPTR" b->typ.e: %"PRIuPTR"\n", a->typ.e, b->typ.e);
             assert(0 && "Unhandled stream type");
         } break;
@@ -247,6 +334,28 @@ void debug_Stream(FILE* out, const Stream stream[static 1]) {
 
 void debug_Streamln(FILE* out, const Stream stream[static 1]) {
     debug_Stream(out, stream);
+    fprintf(out, "\n");
+}
+
+void print_N_Stream(FILE* out, Alloc alloc,
+    const Stream stream[static 1],
+    const size_t count
+) {
+    if (count > 0) {
+        fprintf(out, "%"PRIfPTR, head_Stream(alloc, stream));
+    }
+    const Stream *curr = stream;
+    for (size_t i = 1; i < count; i += 1) {
+        curr = tail_Stream(alloc, curr);
+        fprintf(out, " %"PRIfPTR, head_Stream(alloc, curr));
+    }
+}
+
+void print_N_Streamln(FILE* out, Alloc alloc,
+    const Stream stream[static 1],
+    const size_t count
+) {
+    print_N_Stream(out, alloc, stream, count);
     fprintf(out, "\n");
 }
 

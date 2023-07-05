@@ -12,11 +12,12 @@
 // Compiletime assert
 
 #define CASSERT3(pred, name, line) \
-  typedef char assertion_failed_##name##_##line [2*!!(pred)-1]
+  typedef char assertion_failed_##name##_##line [2*(!!(pred))-1]
 #define CASSERT2(pred, name, line) CASSERT3(pred, name, line)
 #define CASSERT(pred, name) CASSERT2(pred, name, __LINE__)
 
 #define TODO(...) CASSERT(0, TODO)
+#define RUNTIME_TODO(...) assert(0 && "TODO")
 
 // int types
 typedef uint8_t u8;
