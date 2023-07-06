@@ -130,7 +130,82 @@ int test_number(TestCtx ctx) {
     return errs;
 }
 
-int test_lazyadd(TestCtx ctx) {
+int input_test_comm(
+    TestCtx ctx,
+    const Stream* (*operation)(Alloc, const Stream[1], const Stream[1]),
+    size_t n,
+    const Stream* streams[n][3],
+    const size_t depths[n]
+) {
+    int errs = 0;
+    for (size_t i = 0; i < n; i += 1) {
+        for (size_t j = 0; j <= 1; j += 1) {
+            int this_errs = 0;
+            const Stream *a = streams[i][j];
+            const Stream *b = streams[i][1-j];
+            const Stream *const expected = streams[i][2];
+            const Stream *const result = operation(ctx.alloc, a, b);
+
+            if (depths[i] > 0) {
+                const fword head = head_Stream(result);
+                const fword expected_head = head_Stream(expected);
+                TEST (head - expected_head < EPSILON) {
+                    this_errs += 1;
+                    ON_FIRST_ERR({
+                        fprintf(ctx.out, "Head of the sum of ");
+                        debug_Stream(ctx.out, a);
+                        fprintf(ctx.out, " and ");
+                        debug_Stream(ctx.out, b);
+                        fprintf(ctx.out, ", namelly ");
+                        debug_Stream(ctx.out, result);
+                        fprintf(ctx.out, ", should be %"PRIfPTR", but is %"PRIfPTR
+                            ". The expected sum is ",
+                            head, expected_head);
+                        debug_Streamln(ctx.out, expected);
+                    });
+                }
+            } else {
+                assert(depths[i] > 0);
+            }
+
+            const Stream *curr = result;
+            const Stream *expected_curr = expected;
+            for (size_t depth = 1; depth < depths[i]; depth += 1) {
+                curr = tail_Stream(ctx.alloc, curr);
+                expected_curr = tail_Stream(ctx.alloc, expected_curr);
+                const fword head = head_Stream(curr);
+                const fword expected_head = head_Stream(expected_curr);
+                TEST (head - expected_head < EPSILON) {
+                    this_errs += 1;
+                    ON_FIRST_ERR({
+                        fprintf(ctx.out, "At depth %zu, the head of the sum of ",
+                            depth);
+                        debug_Stream(ctx.out, a);
+                        fprintf(ctx.out, " and ");
+                        debug_Stream(ctx.out, b);
+                        fprintf(ctx.out, ", namelly ");
+                        debug_Stream(ctx.out, curr);
+                        fprintf(ctx.out, ", should be %"PRIfPTR", but is %"PRIfPTR
+                            ". The expected sum is ",
+                            head, expected_head);
+                        debug_Streamln(ctx.out, expected_curr);
+                    });
+                }
+            }
+
+            if (this_errs) {
+                errs += 1;
+                fprintf(ctx.out, "displaying expected stream:\n");
+                print_N_Streamln(ctx.out, ctx.alloc, expected, depths[i]);
+                fprintf(ctx.out, "displaying result stream:\n");
+                print_N_Streamln(ctx.out, ctx.alloc, result, depths[i]);
+            }
+        }
+    }
+    return errs;
+}
+
+int test_add_comm(TestCtx ctx) {
     int errs = 0;
     const size_t depths[] = {
         3, 3, 3, 3
@@ -149,81 +224,62 @@ int test_lazyadd(TestCtx ctx) {
                 (const Stream *) make_NumberStream(ctx.alloc, 10.0),
                 (const Stream *) make_NumberStream(ctx.alloc, 25.0)
             ),
-            (const Stream *) make_ZeroStream(ctx.alloc),
-            (const Stream *) make_NumberStream(ctx.alloc, 35.0),
+            (const Stream *) make_NumberStream(ctx.alloc, 7),
+            (const Stream *) make_NumberStream(ctx.alloc, 42.0),
         }, {
             (const Stream *) make_LazyMulStream(ctx.alloc,
                 (const Stream *) make_NumberStream(ctx.alloc, 10.0),
                 (const Stream *) make_NumberStream(ctx.alloc, 5.0)
             ),
+            (const Stream *) make_NumberStream(ctx.alloc, 1.0),
+            (const Stream *) make_NumberStream(ctx.alloc, 51.0),
+        }
+    };
+    CASSERT(ARRAY_SIZE(depths) == ARRAY_SIZE(streams), ADD_DEPTHS_SIZE_EQ_STREAM_SIZE);
+
+    errs += input_test_comm(
+        ctx, add_Stream,
+        ARRAY_SIZE(streams), streams, depths
+    );
+    return errs;
+}
+
+int test_mul_comm(TestCtx ctx) {
+    int errs = 0;
+    const size_t depths[] = {
+        3, 3, 3, 3
+    };
+    const Stream *streams[][3] = {
+        {
+            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+            (const Stream *) make_NumberStream(ctx.alloc, 15.0),
+            (const Stream *) make_NumberStream(ctx.alloc, 150.0),
+        }, {
+            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
             (const Stream *) make_ZeroStream(ctx.alloc),
+            (const Stream *) make_NumberStream(ctx.alloc, 0.0),
+        }, {
+            (const Stream *) make_LazyAddStream(ctx.alloc,
+                (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+                (const Stream *) make_NumberStream(ctx.alloc, 25.0)
+            ),
+            (const Stream *) make_NumberStream(ctx.alloc, 7),
+            (const Stream *) make_NumberStream(ctx.alloc, 245.0),
+        }, {
+            (const Stream *) make_LazyMulStream(ctx.alloc,
+                (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+                (const Stream *) make_NumberStream(ctx.alloc, 5.0)
+            ),
+            (const Stream *) make_NumberStream(ctx.alloc, 1.0),
             (const Stream *) make_NumberStream(ctx.alloc, 50.0),
         }
     };
-    CASSERT(ARRAY_SIZE(depths) == ARRAY_SIZE(streams), DEPTHS_SIZE_EQ_STREAM_SIZE);
+    CASSERT(ARRAY_SIZE(depths) == ARRAY_SIZE(streams), MUL_DEPTHS_SIZE_EQ_STREAM_SIZE);
 
-    for (size_t i = 0; i < ARRAY_SIZE(streams); i += 1) {
-        int this_errs = 0;
-        const Stream *a = streams[i][0];
-        const Stream *b = streams[i][1];
-        const Stream *const expected = streams[i][2];
-        const Stream *const result = add_Stream(ctx.alloc, a, b);
-
-        if (depths[i] > 0) {
-            const fword head = head_Stream(result);
-            const fword expected_head = head_Stream(expected);
-            TEST (head - expected_head < EPSILON) {
-                this_errs += 1;
-                ON_FIRST_ERR({
-                    fprintf(ctx.out, "Head of the sum of ");
-                    debug_Stream(ctx.out, a);
-                    fprintf(ctx.out, " and ");
-                    debug_Stream(ctx.out, b);
-                    fprintf(ctx.out, ", namelly ");
-                    debug_Stream(ctx.out, result);
-                    fprintf(ctx.out, ", should be %"PRIfPTR", but is %"PRIfPTR
-                        ". The expected sum is ",
-                        head, expected_head);
-                    debug_Streamln(ctx.out, expected);
-                });
-            }
-        } else {
-            assert(depths[i] > 0);
-        }
-
-        const Stream *curr = result;
-        const Stream *expected_curr = expected;
-        for (size_t depth = 1; depth < depths[i]; depth += 1) {
-            curr = tail_Stream(ctx.alloc, curr);
-            expected_curr = tail_Stream(ctx.alloc, expected_curr);
-            const fword head = head_Stream(curr);
-            const fword expected_head = head_Stream(expected_curr);
-            TEST (head - expected_head < EPSILON) {
-                this_errs += 1;
-                ON_FIRST_ERR({
-                    fprintf(ctx.out, "At depth %zu, the head of the sum of ",
-                        depth);
-                    debug_Stream(ctx.out, a);
-                    fprintf(ctx.out, " and ");
-                    debug_Stream(ctx.out, b);
-                    fprintf(ctx.out, ", namelly ");
-                    debug_Stream(ctx.out, curr);
-                    fprintf(ctx.out, ", should be %"PRIfPTR", but is %"PRIfPTR
-                        ". The expected sum is ",
-                        head, expected_head);
-                    debug_Streamln(ctx.out, expected_curr);
-                });
-            }
-        }
-
-        if (this_errs) {
-            errs += 1;
-            fprintf(ctx.out, "displaying expected stream:\n");
-            print_N_Streamln(ctx.out, ctx.alloc, expected, depths[i]);
-            fprintf(ctx.out, "displaying result stream:\n");
-            print_N_Streamln(ctx.out, ctx.alloc, result, depths[i]);
-        }
-    }
+    errs += input_test_comm(
+        ctx, mul_Stream,
+        ARRAY_SIZE(streams), streams, depths
+    );
     return errs;
 }
 
@@ -231,7 +287,8 @@ int test_all(TestCtx ctx) {
     int errs = 0;
     RUN_TEST(test_zero, ctx, errs);
     RUN_TEST(test_number, ctx, errs);
-    RUN_TEST(test_lazyadd, ctx, errs);
+    RUN_TEST(test_add_comm, ctx, errs);
+    RUN_TEST(test_mul_comm, ctx, errs);
     return errs;
 }
 
