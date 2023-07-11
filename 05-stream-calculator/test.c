@@ -75,7 +75,7 @@ int test_zero(TestCtx ctx) {
 int test_number(TestCtx ctx) {
     int errs = 0;
 
-    NumberStream ns[] = {
+    const NumberStream ns[] = {
         [0] = local_NumberStream(12.3),
         [1] = local_NumberStream(4.56),
     };
@@ -124,6 +124,72 @@ int test_number(TestCtx ctx) {
                 fprintf(ctx.out, ", but it's head is %"PRIfPTR" (expected is %"PRIfPTR")"
                     " (i=%zu, limit=%zu)\n",
                     head, expected_head, i, ARRAY_SIZE(adds));
+            });
+        }
+    }
+    return errs;
+}
+
+int test_shift(TestCtx ctx) {
+    int errs = 0;
+
+    const Stream *n1 = (const Stream *) make_NumberStream(ctx.alloc, 1.0);
+    const Stream *x = (const Stream *) make_ShiftStream(ctx.alloc,
+        n1,
+        0
+    );
+    const uword count = 3;
+    const Stream *xcount = (const Stream *) make_ShiftStream(ctx.alloc,
+        n1,
+        count
+    );
+
+    {
+        const Stream *tail = tail_Stream(ctx.alloc, (const Stream *) x);
+        const fword h = head_Stream(tail);
+        TEST (h - 1.0 < EPSILON) {
+            errs += 1;
+            ON_FIRST_ERR({
+                fprintf(ctx.out, "The head of tail of ");
+                debug_Stream(ctx.out, (const Stream *) x);
+                fprintf(ctx.out, " should be %"PRIfPTR", but is %"PRIfPTR"\n"
+                    "The tail is: ",
+                    1.0, h);
+                debug_Streamln(ctx.out, tail);
+            });
+        }
+    }
+
+    {
+        const Stream *curr = xcount;
+        for (uword i = 0; i < count + 1; i += 1) {
+            const fword h = head_Stream(curr);
+            curr = tail_Stream(ctx.alloc, curr);
+            TEST (h == 0.0) {
+                errs += 1;
+                ON_FIRST_ERR({
+                    fprintf(ctx.out, "The head of %"PRIuPTR"th tail of ",
+                        i);
+                    debug_Stream(ctx.out, (const Stream *) xcount);
+                    fprintf(ctx.out, " should be %"PRIfPTR", but is %"PRIfPTR"\n"
+                        "The tail is: ",
+                        0.0, h);
+                    debug_Streamln(ctx.out, curr);
+                });
+            }
+        }
+
+        const fword h = head_Stream(curr);
+        TEST (h == 1.0) {
+            errs += 1;
+            ON_FIRST_ERR({
+                fprintf(ctx.out, "The head of %"PRIuPTR"th tail of ",
+                    count+1);
+                debug_Stream(ctx.out, (const Stream *) xcount);
+                fprintf(ctx.out, " should be %"PRIfPTR", but is %"PRIfPTR"\n"
+                    "The tail is: ",
+                    1.0, h);
+                debug_Streamln(ctx.out, curr);
             });
         }
     }
@@ -207,28 +273,47 @@ int input_test_comm(
 
 int test_add_comm(TestCtx ctx) {
     int errs = 0;
+
+    const Stream *n10 = (const Stream *) make_NumberStream(ctx.alloc, 10.0);
+    const Stream *n15 = (const Stream *) make_NumberStream(ctx.alloc, 15.0);
+    const Stream *n25 = (const Stream *) make_NumberStream(ctx.alloc, 25.0);
+
     const size_t depths[] = {
-        3, 3, 3, 3
+        3, 3, 6, 3, 3
     };
+
     const Stream *streams[][3] = {
         {
-            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
-            (const Stream *) make_NumberStream(ctx.alloc, 15.0),
-            (const Stream *) make_NumberStream(ctx.alloc, 25.0),
+            n10,
+            n15,
+            n25,
         }, {
-            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+            n10,
             (const Stream *) make_ZeroStream(ctx.alloc),
-            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+            n10,
+        }, {
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                n10,
+                2
+            ),
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                n15,
+                2
+            ),
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                n25,
+                2
+            ),
         }, {
             (const Stream *) make_LazyAddStream(ctx.alloc,
-                (const Stream *) make_NumberStream(ctx.alloc, 10.0),
-                (const Stream *) make_NumberStream(ctx.alloc, 25.0)
+                n10,
+                n25
             ),
             (const Stream *) make_NumberStream(ctx.alloc, 7),
             (const Stream *) make_NumberStream(ctx.alloc, 42.0),
         }, {
             (const Stream *) make_LazyMulStream(ctx.alloc,
-                (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+                n10,
                 (const Stream *) make_NumberStream(ctx.alloc, 5.0)
             ),
             (const Stream *) make_NumberStream(ctx.alloc, 1.0),
@@ -246,28 +331,47 @@ int test_add_comm(TestCtx ctx) {
 
 int test_mul_comm(TestCtx ctx) {
     int errs = 0;
+
+    const Stream *n0 = (const Stream *) make_NumberStream(ctx.alloc, 0.0);
+    const Stream *n10 = (const Stream *) make_NumberStream(ctx.alloc, 10.0);
+    const Stream *n15 = (const Stream *) make_NumberStream(ctx.alloc, 15.0);
+
     const size_t depths[] = {
-        3, 3, 3, 3
+        3, 3, 8, 3, 3
     };
+
     const Stream *streams[][3] = {
         {
-            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
-            (const Stream *) make_NumberStream(ctx.alloc, 15.0),
+            n10,
+            n15,
             (const Stream *) make_NumberStream(ctx.alloc, 150.0),
         }, {
-            (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+            n10,
             (const Stream *) make_ZeroStream(ctx.alloc),
-            (const Stream *) make_NumberStream(ctx.alloc, 0.0),
+            n0,
+        }, {
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                n10,
+                2
+            ),
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                n15,
+                2
+            ),
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                (const Stream *) make_NumberStream(ctx.alloc, 150.0),
+                5
+            ),
         }, {
             (const Stream *) make_LazyAddStream(ctx.alloc,
-                (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+                n10,
                 (const Stream *) make_NumberStream(ctx.alloc, 25.0)
             ),
             (const Stream *) make_NumberStream(ctx.alloc, 7),
             (const Stream *) make_NumberStream(ctx.alloc, 245.0),
         }, {
             (const Stream *) make_LazyMulStream(ctx.alloc,
-                (const Stream *) make_NumberStream(ctx.alloc, 10.0),
+                n10,
                 (const Stream *) make_NumberStream(ctx.alloc, 5.0)
             ),
             (const Stream *) make_NumberStream(ctx.alloc, 1.0),
@@ -287,8 +391,11 @@ int test_all(TestCtx ctx) {
     int errs = 0;
     RUN_TEST(test_zero, ctx, errs);
     RUN_TEST(test_number, ctx, errs);
+    RUN_TEST(test_shift, ctx, errs);
     RUN_TEST(test_add_comm, ctx, errs);
     RUN_TEST(test_mul_comm, ctx, errs);
+    // TODO test_add_assoc
+    // TODO test_mul_assoc
     return errs;
 }
 

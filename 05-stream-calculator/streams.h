@@ -6,6 +6,7 @@
 enum _StreamType {
     ZERO_STREAM,
     NUMBER_STREAM,
+    SHIFT_STREAM,
     LAZY_ADD_STREAM,
     LAZY_MUL_STREAM,
     STREAMTYPE_COUNT,
@@ -41,6 +42,10 @@ typedef struct {
 typedef struct {
     Stream header;
 } NumberStream;
+
+typedef struct {
+    Stream header;
+} ShiftStream;
 
 typedef struct {
     Stream header;
@@ -86,6 +91,7 @@ void print_N_Streamln(FILE* out, Alloc alloc, const Stream stream[static 1], con
 static const char *STREAM_TYPENAME[] = {
     "ZERO",
     "NUMBER",
+    "SHIFT",
     "LAZY_ADD",
     "LAZY_MUL",
     "STREAMTYPE_COUNT",
@@ -104,6 +110,7 @@ static ZeroStream THE_ZERO_STREAM = {
 
 #include "streams/zero.c"
 #include "streams/number.c"
+#include "streams/shift.c"
 #include "streams/lazyadd.c"
 #include "streams/lazymul.c"
 
@@ -123,6 +130,11 @@ const Stream* add_Number_Stream(Alloc alloc, const NumberStream ns[static 1], co
             const fword ha = local_head_NumberStream(*(const NumberStream *) ns);
             const fword hb = local_head_NumberStream(*(const NumberStream *) b);
             result = (const Stream *) make_NumberStream(alloc, ha + hb);
+        } break;
+        case SHIFT_STREAM:
+        {
+            _shiftstream_ok((const ShiftStream *) b);
+            result = (const Stream *) make_LazyAddStream(alloc, (const Stream *) ns, b);
         } break;
         case LAZY_ADD_STREAM:
         {
@@ -158,6 +170,11 @@ const Stream* mul_Number_Stream(Alloc alloc, const NumberStream ns[static 1], co
             result = (const Stream *) make_NumberStream(alloc, ha * hb);
         {
         } break;
+        case SHIFT_STREAM:
+        {
+            _shiftstream_ok((const ShiftStream *) b);
+            result = (const Stream *) make_LazyMulStream(alloc, (const Stream *) ns, b);
+        } break;
         case LAZY_ADD_STREAM:
         {
             _lazyaddstream_ok((const LazyAddStream *) b);
@@ -188,6 +205,10 @@ void _stream_ok(const Stream stream[static 1]) {
         {
             _numberstream_ok((const NumberStream *) stream);
         } break;
+        case SHIFT_STREAM:
+        {
+            _shiftstream_ok((const ShiftStream *) stream);
+        } break;
         case LAZY_ADD_STREAM:
         {
             _lazyaddstream_ok((const LazyAddStream *) stream);
@@ -217,6 +238,11 @@ fword head_Stream(const Stream stream[static 1]) {
         {
             _numberstream_ok((const NumberStream *) stream);
             result = head_NumberStream((const NumberStream *) stream);
+        } break;
+        case SHIFT_STREAM:
+        {
+            _shiftstream_ok((const ShiftStream *) stream);
+            result = head_ShiftStream((const ShiftStream *) stream);
         } break;
         case LAZY_ADD_STREAM:
         {
@@ -251,6 +277,11 @@ const Stream* tail_Stream(Alloc alloc, const Stream stream[static 1]) {
         {
             _numberstream_ok((const NumberStream *) stream);
             result = (const Stream *) &THE_ZERO_STREAM;
+        } break;
+        case SHIFT_STREAM:
+        {
+            _shiftstream_ok((const ShiftStream *) stream);
+            result = tail_ShiftStream(alloc, (const ShiftStream *) stream);
         } break;
         case LAZY_ADD_STREAM:
         {
@@ -288,6 +319,8 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
             _numberstream_ok((const NumberStream *) a);
             result = add_Number_Stream(alloc, (const NumberStream *) a, b);
         } break;
+        // TODO: Try to join (shift + shift)
+        case SHIFT_STREAM:
         // TODO: Try to join (s + number)
         case LAZY_ADD_STREAM:
         case LAZY_MUL_STREAM:
@@ -300,6 +333,7 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
                     result = a;
                 } break;
                 case NUMBER_STREAM:
+                case SHIFT_STREAM:
                 case LAZY_ADD_STREAM:
                 case LAZY_MUL_STREAM:
                 {
@@ -331,6 +365,8 @@ const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
             _numberstream_ok((const NumberStream *) a);
             result = mul_Number_Stream(alloc, (const NumberStream *) a, b);
         } break;
+        // TODO: Try to join (shift * shift)
+        case SHIFT_STREAM:
         // TODO: Try to join (s * number)
         case LAZY_ADD_STREAM:
         case LAZY_MUL_STREAM:
@@ -343,6 +379,7 @@ const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
                     result = b;
                 } break;
                 case NUMBER_STREAM:
+                case SHIFT_STREAM:
                 case LAZY_ADD_STREAM:
                 case LAZY_MUL_STREAM:
                 {
@@ -370,8 +407,17 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
         {
             print_NumberStream(out, (const NumberStream *) stream);
         } break;
+        case SHIFT_STREAM:
+        {
+            _shiftstream_ok((const ShiftStream *) stream);
+            fprintf(out, "(");
+            print_Stream(out, stream->stream1);
+            fprintf(out, " ");
+            fprintf(out, "%"PRIuPTR" Shift)", (stream->data2) + 1);
+        } break;
         case LAZY_ADD_STREAM:
         {
+            _lazyaddstream_ok((const LazyAddStream *) stream);
             fprintf(out, "(");
             print_Stream(out, stream->stream1);
             fprintf(out, " ");
@@ -380,6 +426,7 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
         } break;
         case LAZY_MUL_STREAM:
         {
+            _lazymulstream_ok((const LazyMulStream *) stream);
             fprintf(out, "(");
             print_Stream(out, stream->stream1);
             fprintf(out, " ");
