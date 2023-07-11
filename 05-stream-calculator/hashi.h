@@ -9,6 +9,9 @@
 
 // Helpers
 
+// Epsilon
+#define EPSILON 1e-16
+
 // Compiletime assert
 
 #define CASSERT3(pred, name, line) \

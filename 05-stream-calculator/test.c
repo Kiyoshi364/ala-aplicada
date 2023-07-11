@@ -3,7 +3,6 @@
 #define STREAM_IMPLEMENTATION
 #include "streams.h"
 
-#define EPSILON 1e-16
 #define TEST(x) if (!(x))
 #define ON_FIRST_ERR(block) do { \
         if (!first_err) { \
@@ -169,7 +168,7 @@ int test_shift(TestCtx ctx) {
                 errs += 1;
                 ON_FIRST_ERR({
                     fprintf(ctx.out, "The head of %"PRIuPTR"th tail of ",
-                        i);
+                        i+1);
                     debug_Stream(ctx.out, (const Stream *) xcount);
                     fprintf(ctx.out, " should be %"PRIfPTR", but is %"PRIfPTR"\n"
                         "The tail is: ",
@@ -387,6 +386,110 @@ int test_mul_comm(TestCtx ctx) {
     return errs;
 }
 
+int test_inv(TestCtx ctx) {
+    int errs = 0;
+
+    const Stream *n1 = (const Stream *) make_NumberStream(ctx.alloc, 1.0);
+    const Stream *n_1 = (const Stream *) make_NumberStream(ctx.alloc, -1.0);
+    const Stream *x = (const Stream *) make_ShiftStream(ctx.alloc, n1, 0);
+    const Stream *inv_loop1 = (const Stream *) make_LazyAddStream(ctx.alloc,
+        n1,
+        (const Stream *) make_LazyMulStream(ctx.alloc,
+            n_1,
+            x
+        )
+    );
+    const Stream *loop1 = (const Stream *) make_LazyInvStream(ctx.alloc,
+        inv_loop1
+    );
+    const Stream *inv_loopnat = (const Stream *) make_LazyMulStream(ctx.alloc,
+        inv_loop1,
+        inv_loop1
+    );
+    const Stream *loopnat = (const Stream *) make_LazyInvStream(ctx.alloc,
+        inv_loopnat
+    );
+
+    {
+        const Stream *curr = loop1;
+        for (size_t i = 0; i < 10; i += 1) {
+            const fword h = head_Stream(curr);
+            curr = tail_Stream(ctx.alloc, curr);
+
+            TEST (h == 1.0) {
+                errs += 1;
+                ON_FIRST_ERR({
+                    fprintf(ctx.out, "The head of %"PRIuPTR"th tail of ",
+                        i+1);
+                    debug_Stream(ctx.out, loop1);
+                    fprintf(ctx.out, " should be %"PRIfPTR", but is %"PRIfPTR"\n"
+                        "The tail is: ",
+                        1.0, h);
+                    debug_Streamln(ctx.out, curr);
+                });
+            }
+        }
+    }
+
+    {
+        const Stream *curr = loopnat;
+        for (size_t i = 0; i < 10; i += 1) {
+            const fword h = head_Stream(curr);
+            curr = tail_Stream(ctx.alloc, curr);
+
+            TEST (h == (fword) (i + 1)) {
+                errs += 1;
+                ON_FIRST_ERR({
+                    fprintf(ctx.out, "The head of %"PRIuPTR"th tail of ",
+                        i+1);
+                    debug_Stream(ctx.out, loopnat);
+                    fprintf(ctx.out, " should be %"PRIfPTR", but is %"PRIfPTR"\n"
+                        "The tail is: ",
+                        1.0, h);
+                    debug_Streamln(ctx.out, curr);
+                });
+            }
+        }
+    }
+
+    {
+        const Stream *n10 = (const Stream *) make_NumberStream(ctx.alloc, 10.0);
+        const Stream *inv_n10 = (const Stream *) inv_Stream(ctx.alloc, n10);
+        const fword h = head_Stream(inv_n10);
+        const Stream *tail = tail_Stream(ctx.alloc, inv_n10);
+        TEST (h == 0.1) {
+            errs += 1;
+            ON_FIRST_ERR({
+                fprintf(ctx.out, "The head of ");
+                debug_Stream(ctx.out, inv_n10);
+                fprintf(ctx.out, " should be %"PRIfPTR", but is %"PRIfPTR"\n"
+                    "The tail is: ",
+                    0.1, h);
+                debug_Streamln(ctx.out, tail);
+            });
+        }
+
+        for (size_t i = 0; i < 10; i += 1) {
+            const fword th = head_Stream(tail);
+            tail = tail_Stream(ctx.alloc, tail);
+            TEST (th == 0.0) {
+                errs += 1;
+                ON_FIRST_ERR({
+                    fprintf(ctx.out, "The head of %zuth tail of",
+                        i+1);
+                    debug_Stream(ctx.out, inv_n10);
+                    fprintf(ctx.out, " should be %"PRIfPTR", but is %"PRIfPTR"\n"
+                        "The tail is: ",
+                        0.0, th);
+                    debug_Streamln(ctx.out, tail);
+                });
+            }
+        }
+    }
+
+    return errs;
+}
+
 int test_all(TestCtx ctx) {
     int errs = 0;
     RUN_TEST(test_zero, ctx, errs);
@@ -394,6 +497,7 @@ int test_all(TestCtx ctx) {
     RUN_TEST(test_shift, ctx, errs);
     RUN_TEST(test_add_comm, ctx, errs);
     RUN_TEST(test_mul_comm, ctx, errs);
+    RUN_TEST(test_inv, ctx, errs);
     // TODO test_add_assoc
     // TODO test_mul_assoc
     return errs;
