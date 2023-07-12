@@ -1,31 +1,9 @@
 #include <stdio.h>
 
 #define STREAM_IMPLEMENTATION
-#include "streams.h"
+#include "../streams.h"
 
-#define TEST(x) if (!(x))
-#define ON_FIRST_ERR(block) do { \
-        if (!first_err) { \
-            block; \
-            first_err += 1; \
-        } \
-    } while (0)
-#define RUN_TEST(test, ctx, errs) {\
-        int _local_errs = (test)(ctx); \
-        if (_local_errs != 0) { \
-            fprintf(ctx.out, "Found %d errors in " #test "!\n", _local_errs); \
-        } else { \
-            fprintf(ctx.out, "Test ok (" #test ")\n"); \
-        } \
-        errs += _local_errs; \
-    }
-
-static int first_err = 0;
-
-typedef struct {
-    Alloc alloc;
-    FILE *out;
-} TestCtx;
+#include "test.h"
 
 int test_zero(TestCtx ctx) {
     int errs = 0;
@@ -503,18 +481,4 @@ int test_all(TestCtx ctx) {
     return errs;
 }
 
-int main(void) {
-    TestCtx ctx = (TestCtx){
-        .alloc = MAKE_ALLOC(0x400),
-        .out = stderr,
-    };
-    int errs = test_all(ctx);
-    if (errs) {
-        fprintf(ctx.out,
-            "Tests failed. Found %d errors!\n", errs);
-    } else {
-        fprintf(ctx.out,
-            "All ok!\n");
-    }
-    return errs;
-}
+#include "main_test.h"
