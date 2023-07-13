@@ -13,3 +13,4 @@ compile_run () {
   ${compile} "${prog}" -o "${out}" && ./"${out}"
 }
 compile_run test_streams
+compile_run test_parser

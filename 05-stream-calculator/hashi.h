@@ -44,6 +44,13 @@ typedef intptr_t iword;
 typedef double fword;
 #define PRIfPTR "lf"
 
+// bool types
+typedef u8 b8;
+typedef u16 b16;
+typedef u32 b32;
+typedef u64 b64;
+typedef uword bword;
+
 // Allocator
 
 typedef struct{ u8 dummy; } Alloc;
