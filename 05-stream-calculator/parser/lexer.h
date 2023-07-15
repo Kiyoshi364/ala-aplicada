@@ -38,6 +38,15 @@ typedef struct {
     Token token;
 } NextToken;
 
+StrView from_str_view(const char *buffer);
+StrView take_view(const StrView v, const size_t count);
+StrView drop_view(const StrView v, const size_t count);
+
+LexerState new_lexer(const StrView view);
+NextToken next_token(const LexerState s);
+
+fword read_number(const StrView view);
+
 #endif // _LEXER_H
 
 #ifdef LEXER_IMPLEMENTATION
@@ -160,7 +169,7 @@ b8 starts_number(const char c) {
     return (c == '_') || ('0' <= c && c <= '9');
 }
 
-b8 continues_number(const char c) {
+b8 continues_inumber(const char c) {
     return starts_number(c);
 }
 
@@ -186,7 +195,7 @@ b8 ends_id(const char c) {
     );
 }
 
-LexerState new_lexer(StrView view) {
+LexerState new_lexer(const StrView view) {
     return (LexerState) {
         .view = view,
     };
@@ -211,9 +220,9 @@ LexerState trim_left_lexer(LexerState s) {
     };
 }
 
-NextToken next_token_number(const LexerState s) {
+NextToken next_token_inumber(const LexerState s) {
     size_t i = 0;
-    while (i < s.view.len && continues_number(s.view.buffer[i])) {
+    while (i < s.view.len && continues_inumber(s.view.buffer[i])) {
         i += 1;
     }
     return (NextToken) {
@@ -227,9 +236,32 @@ NextToken next_token_number(const LexerState s) {
     };
 }
 
+NextToken next_token_number(const LexerState s) {
+    const NextToken num1 = next_token_inumber(s);
+    assert(num1.token.type == TK_NUMBER);
+    if (num1.state.view.len > 0 && num1.state.view.buffer[0] == '.') {
+        const LexerState after_dot = _consume_lexer(num1.state, '.');
+        const NextToken num2 = next_token_inumber(after_dot);
+        const size_t num_len = num1.token.text.len + 1 + num2.token.text.len;
+        assert(num2.token.type == TK_NUMBER);
+        assert(num2.token.text.buffer == s.view.buffer + num1.token.text.len + 1);
+        return (NextToken) {
+            .state = (LexerState) {
+                .view = drop_view(s.view, num_len),
+            },
+            .token = (Token) {
+                .type = TK_NUMBER,
+                .text = take_view(s.view, num_len),
+            },
+        };
+    } else {
+        return num1;
+    }
+}
+
 NextToken next_token_register(const LexerState s) {
     const LexerState rest = _consume_lexer(s, '$');
-    const NextToken nt = next_token_number(rest);
+    const NextToken nt = next_token_inumber(rest);
     assert(nt.token.text.buffer == s.view.buffer + 1);
     assert(nt.token.type == TK_NUMBER);
     return (NextToken) {
@@ -336,6 +368,69 @@ NextToken next_token(const LexerState s) {
             },
         };
     }
+}
+
+iword _local_read_inumber(const StrView view, iword *out_sign, size_t *in_out_i) {
+    uword v = 0.0;
+    size_t i = *in_out_i;
+    if (view.buffer[i] == '_') {
+        i += 1;
+        *out_sign = -1;
+    } else {
+        *out_sign = 1;
+    }
+
+    // integer part
+    while (i < view.len && view.buffer[i] != '.') {
+        const char c = view.buffer[i];
+        i += 1;
+        if (c == '_') {
+            continue;
+        }
+        assert('0' <= c && c <= '9');
+        v = v * 10 + (c - '0');
+    }
+    *in_out_i = i;
+    return v;
+}
+
+iword read_inumber(const StrView view) {
+    iword sign;
+    size_t i = 0;
+    iword v = _local_read_inumber(view, &sign, &i);
+
+    assert(i == view.len);
+    return sign * v;
+}
+
+fword read_number(const StrView view) {
+    iword uint_sign;
+    size_t i = 0;
+
+    fword v = (fword) _local_read_inumber(view, &uint_sign, &i);
+    const fword sign = (fword) uint_sign;
+    assert(sign == 1.0 || sign == -1.0);
+
+    // fractional part
+    if (view.buffer[i] == '.') {
+        i += 1;
+        fword shift = 0.1;
+        fword frac = 0.0;
+        while (i < view.len) {
+            const char c = view.buffer[i];
+            i += 1;
+            if (c == '_') {
+                continue;
+            }
+            assert('0' <= c && c <= '9');
+            frac += shift * ((fword) (c - '0'));
+            shift *= 0.1;
+        }
+        v += frac;
+    }
+
+    assert(i == view.len);
+    return sign * v;
 }
 
 #endif // LEXER_IMPLEMENTED

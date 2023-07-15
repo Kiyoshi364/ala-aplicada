@@ -11,7 +11,27 @@ typedef struct {
         TokenType type;
         const char *text;
     } tokens[32];
-} Example;
+} LexerExample;
+
+typedef union {
+    fword f;
+    uword u;
+} fuword;
+
+typedef struct {
+    const char *input;
+    const fuword number;
+} ReadNumberExample;
+
+typedef union {
+    iword i;
+    uword u;
+} iuword;
+
+typedef struct {
+    const char *input;
+    const iuword number;
+} ReadInumberExample;
 
 int eq_str_view(const char *str, const StrView view) {
     size_t i = 0;
@@ -25,7 +45,7 @@ int eq_str_view(const char *str, const StrView view) {
 
 int test_lexer_examples(TestCtx ctx) {
     int errs = 0;
-    const Example examples[] = {
+    const LexerExample examples[] = {
         {
             .input = "1 2 _3_ ; add mul $12 \n",
             .tokens = {
@@ -79,6 +99,26 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_REGISTER, "$123___4" },
                 { TK_EOF, "" },
             },
+        }, {
+            .input = "asdf_asdf # _asdf",
+            .tokens = {
+                { TK_ID, "asdf_asdf" },
+                { TK_BEGIN_COMMENT, "#" },
+                { TK_NUMBER, "_" },
+                { TK_ID, "asdf" },
+                { TK_EOF, "" },
+            },
+        }, {
+            .input = "1234 56.78 _9_.___0_ 3. __ a_",
+            .tokens = {
+                { TK_NUMBER, "1234" },
+                { TK_NUMBER, "56.78" },
+                { TK_NUMBER, "_9_.___0_" },
+                { TK_NUMBER, "3." },
+                { TK_NUMBER, "__" },
+                { TK_ID, "a_" },
+                { TK_EOF, "" },
+            },
         }
     };
 
@@ -101,9 +141,171 @@ int test_lexer_examples(TestCtx ctx) {
                     STRVIEW(token.text), TK_NAME(token.type));
             }
             lex = nt.state;
-            if (token.type == TK_EOF) {
+            if (tokens[j].type == TK_EOF || token.type == TK_EOF) {
                 break;
             }
+        }
+    }
+
+    return errs;
+}
+
+int test_read_number(TestCtx ctx) {
+    int errs = 0;
+    const ReadNumberExample examples[] = {
+        {
+            .input = "1",
+            .number = { .f = 1.0L },
+        }, {
+            .input = "2",
+            .number = { .f = 2.0L },
+        }, {
+            .input = "_3_",
+            .number = { .f = -3.0L },
+        }, {
+            .input = "0",
+            .number = { .f = 0.0L },
+        }, {
+            .input = "_",
+            .number = { .f = -0.0L },
+        }, {
+            .input = "__",
+            .number = { .f = -0.0L },
+        }, {
+            .input = "0_0",
+            .number = { .f = 0.0L },
+        }, {
+            .input = "123___4",
+            .number = { .f = 1234.0L },
+        }, {
+            .input = "56.78",
+            .number = { .f = 56.78L },
+        }, {
+            .input = "_9_.___0_",
+            .number = { .f = -9.0L },
+        }, {
+            .input = "3.",
+            .number = { .f = 3.0L },
+        }, {
+            .input = "0.123456789",
+            .number = { .f = 0.123456789L },
+        }
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(examples); i += 1) {
+        const StrView input = from_str_view(examples[i].input);
+        const LexerState lex = new_lexer(input);
+        const NextToken nt = next_token(lex);
+        const Token token = nt.token;
+        const fuword number = {
+            .f = read_number(token.text),
+        };
+        TEST (token.text.len == input.len
+            && token.text.buffer == input.buffer
+            && token.type == TK_NUMBER
+        ) {
+            errs += 1;
+            fprintf(ctx.out,
+                "(%zu) Expected '%"PRIVIEW"' to be lexed as %s"
+                " but got lexed as '%"PRIVIEW"' (%s)\n",
+                i,
+                STRVIEW(input), TK_NAME(TK_NUMBER),
+                STRVIEW(token.text), TK_NAME(token.type));
+        } else {
+            const NextToken nt_eof = next_token(nt.state);
+            assert(nt_eof.token.type == TK_EOF);
+        }
+        TEST (number.f - examples[i].number.f < EPSILON) {
+            errs += 1;
+            fprintf(ctx.out,
+                "(%zu) Expected number to be is %"PRIfPTR" (0x%016"PRIXPTR"),"
+                " but got %"PRIfPTR" (0x%016"PRIXPTR"),"
+                " with input '%"PRIVIEW"'\n",
+                i,
+                examples[i].number.f, examples[i].number.u,
+                number.f, number.u,
+                STRVIEW(input));
+        }
+    }
+
+    return errs;
+}
+
+int test_read_inumber(TestCtx ctx) {
+    int errs = 0;
+    const ReadInumberExample examples[] = {
+        {
+            .input = "1",
+            .number = { .i = 1 },
+        }, {
+            .input = "2",
+            .number = { .i = 2 },
+        }, {
+            .input = "_3_",
+            .number = { .i = -3 },
+        }, {
+            .input = "0",
+            .number = { .i = 0 },
+        }, {
+            .input = "_",
+            .number = { .i = -0 },
+        }, {
+            .input = "__",
+            .number = { .i = -0 },
+        }, {
+            .input = "0_0",
+            .number = { .i = 0 },
+        }, {
+            .input = "123___4",
+            .number = { .i = 1234 },
+        }, {
+            .input = "56_78",
+            .number = { .i = 5678 },
+        }, {
+            .input = "_9___0_",
+            .number = { .i = -90 },
+        }, {
+            .input = "3",
+            .number = { .i = 3 },
+        }, {
+            .input = "123_456_789",
+            .number = { .i = 123456789L },
+        }
+    };
+
+    for (size_t i = 0; i < ARRAY_SIZE(examples); i += 1) {
+        const StrView input = from_str_view(examples[i].input);
+        const LexerState lex = new_lexer(input);
+        const NextToken nt = next_token(lex);
+        const Token token = nt.token;
+        const iuword number = {
+            .i = read_inumber(token.text),
+        };
+        TEST (token.text.len == input.len
+            && token.text.buffer == input.buffer
+            && token.type == TK_NUMBER
+        ) {
+            errs += 1;
+            fprintf(ctx.out,
+                "(%zu) Expected '%"PRIVIEW"' to be lexed as %s"
+                " but got lexed as '%"PRIVIEW"' (%s)\n",
+                i,
+                STRVIEW(input), TK_NAME(TK_NUMBER),
+                STRVIEW(token.text), TK_NAME(token.type));
+        } else {
+            const NextToken nt_eof = next_token(nt.state);
+            assert(nt_eof.token.type == TK_EOF);
+        }
+        TEST (number.i == examples[i].number.i) {
+            errs += 1;
+            fprintf(ctx.out,
+                "(%zu) Expected number to be is %"PRIdPTR" (0x%016"PRIXPTR"),"
+                " but got %"PRIdPTR" (0x%016"PRIXPTR"),"
+                " with input '%"PRIVIEW"'\n",
+                i,
+                examples[i].number.i, examples[i].number.u,
+                number.i, number.u,
+                STRVIEW(input));
         }
     }
 
@@ -113,7 +315,9 @@ int test_lexer_examples(TestCtx ctx) {
 int test_all(TestCtx ctx) {
     int errs = 0;
 
-    errs += test_lexer_examples(ctx);
+    RUN_TEST(test_lexer_examples, ctx, errs);
+    RUN_TEST(test_read_number, ctx, errs);
+    RUN_TEST(test_read_inumber, ctx, errs);
     (void) first_err;
 
     return errs;
