@@ -162,6 +162,7 @@ b8 should_skip(const char c) {
     return c == ' '
         || c == '\t'
         || c == '\r'
+        || c == 0x1b // \e ESCAPE
     ;
 }
 
@@ -329,6 +330,11 @@ NextToken next_token_id(const LexerState s) {
             };
         }
     } else {
+        fprintf(stderr, "\nREST OF INPUT: '%.*s'%s\n",
+            (s.view.len > 10) ? (10) : (int) (s.view.len),
+            s.view.buffer,
+            (s.view.len > 10) ? ("...") : ("")
+        );
         assert(0 && "empty token_id");
         return (NextToken) {0};
     }
