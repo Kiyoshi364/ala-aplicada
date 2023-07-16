@@ -6,7 +6,7 @@
 #include "streams.h"
 
 #define LEXER_IMPLEMENTATION
-#include "parser/lexer.h"
+#include "lexer.h"
 
 #define MAX_LINE 0x400
 

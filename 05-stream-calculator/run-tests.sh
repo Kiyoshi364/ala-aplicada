@@ -15,7 +15,7 @@ compile_run () {
   total_errs=$((${total_errs} + $?))
 }
 compile_run test_streams
-compile_run test_parser
+compile_run test_lexer
 
 set +x
 

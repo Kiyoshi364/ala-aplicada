@@ -1,7 +1,7 @@
 #ifndef _LEXER_H
 #define _LEXER_H
 
-#include "../hashi.h"
+#include "hashi.h"
 
 typedef enum {
     TK_NUMBER,
