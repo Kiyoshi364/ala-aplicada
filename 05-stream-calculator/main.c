@@ -99,6 +99,26 @@ ReplState push_register_repl(
     return repl;
 }
 
+ReplState pop_register_repl(
+    FILE *stream,
+    const ReplState old_repl,
+    const size_t reg
+) {
+    assert(reg < REGISTER_COUNT);
+    ReplState repl = old_repl;
+    if (repl.stack_size < 1) {
+        warning(stream,
+            "stack underflow: attempt on pop to register '$%zu',"
+            " ignoring store",
+            reg
+        );
+    } else {
+        repl.reg_list[reg] = repl.stack[repl.stack_size-1];
+        repl.stack_size -= 1;
+    }
+    return repl;
+}
+
 ReplState add_repl(FILE *stream, const ReplState old_repl) {
     ReplState repl = old_repl;
     if (repl.stack_size < 2) {
@@ -173,7 +193,7 @@ ReplState eval_repl(
                 const fword number = read_number(token.text);
                 repl = push_number_repl(stream, repl, number);
             } break;
-            case TK_REGISTER: {
+            case TK_LOAD_REGISTER: {
                 assert(token.text.len > 1 && token.text.buffer[0] == '$');
                 const iword i_reg = read_inumber(
                     drop_view(token.text, 1)
@@ -194,6 +214,28 @@ ReplState eval_repl(
                     );
                 }
                 repl = push_register_repl(stream, repl, reg);
+            } break;
+            case TK_STORE_REGISTER: {
+                assert(token.text.len > 1 && token.text.buffer[0] == '!');
+                const iword i_reg = read_inumber(
+                    drop_view(token.text, 1)
+                );
+                size_t reg = (size_t) (i_reg < 0 ? -i_reg : i_reg);
+                if (i_reg < 0) {
+                    warning(stream,
+                        "register is negative, using '$%zu' instead",
+                        reg
+                    );
+                }
+                if (!(reg < REGISTER_COUNT)) {
+                    reg = REGISTER_COUNT - 1;
+                    warning(stream,
+                        "register is out of bounds (%zu), using '$%zu' instead",
+                        (size_t) REGISTER_COUNT,
+                        reg
+                    );
+                }
+                repl = pop_register_repl(stream, repl, reg);
             } break;
             case TK_KW_ADD: {
                 repl = add_repl(stream, repl);

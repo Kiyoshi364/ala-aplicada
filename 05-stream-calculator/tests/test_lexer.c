@@ -55,17 +55,17 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_SEMI_COLON, ";" },
                 { TK_KW_ADD, "add" },
                 { TK_KW_MUL, "mul" },
-                { TK_REGISTER, "$12" },
+                { TK_LOAD_REGISTER, "$12" },
                 { TK_NEW_LINE, "\n" },
                 { TK_EOF, "" },
             },
         }, {
-            .input = "!@#$0%&*-+=()[]{},.<>:~^/\\|?",
+            .input = "!0@#$0%&*-+=()[]{},.<>:~^/\\|?",
             .tokens = {
-                { TK_PUNCTUATION, "!" },
+                { TK_STORE_REGISTER, "!0" },
                 { TK_PUNCTUATION, "@" },
                 { TK_BEGIN_COMMENT, "#" },
-                { TK_REGISTER, "$0" },
+                { TK_LOAD_REGISTER, "$0" },
                 { TK_KW_INV, "%" },
                 { TK_PUNCTUATION, "&" },
                 { TK_KW_MUL, "*" },
@@ -92,11 +92,21 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_EOF, "" },
             },
         }, {
-            .input = "$_\t$0_0\r\r$123___4",
+            .input = "$_\t$0_0\r\x1b$123___4\x1b$_3",
             .tokens = {
-                { TK_REGISTER, "$_" },
-                { TK_REGISTER, "$0_0" },
-                { TK_REGISTER, "$123___4" },
+                { TK_LOAD_REGISTER, "$_" },
+                { TK_LOAD_REGISTER, "$0_0" },
+                { TK_LOAD_REGISTER, "$123___4" },
+                { TK_LOAD_REGISTER, "$_3" },
+                { TK_EOF, "" },
+            },
+        }, {
+            .input = "!_\t!0_0\r\x1b!123___4\x1b!_3",
+            .tokens = {
+                { TK_STORE_REGISTER, "!_" },
+                { TK_STORE_REGISTER, "!0_0" },
+                { TK_STORE_REGISTER, "!123___4" },
+                { TK_STORE_REGISTER, "!_3" },
                 { TK_EOF, "" },
             },
         }, {

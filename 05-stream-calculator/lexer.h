@@ -5,7 +5,8 @@
 
 typedef enum {
     TK_NUMBER,
-    TK_REGISTER,
+    TK_LOAD_REGISTER,
+    TK_STORE_REGISTER,
     TK_KW_ADD,
     TK_KW_MUL,
     TK_KW_INV,
@@ -56,7 +57,8 @@ fword read_number(const StrView view);
 
 static char *token_to_name[] = {
     "TK_NUMBER",
-    "TK_REGISTER",
+    "TK_LOAD_REGISTER",
+    "TK_STORE_REGISTER",
     "TK_KW_ADD",
     "TK_KW_MUL",
     "TK_KW_INV",
@@ -91,7 +93,6 @@ static struct {
     { TK_BEGIN_COMMENT, '#' },
     { TK_NEW_LINE, '\n' },
     // Ignored
-    { TK_PUNCTUATION, '!' },
     { TK_PUNCTUATION, '@' },
     { TK_PUNCTUATION, '&' },
     { TK_PUNCTUATION, '-' },
@@ -175,8 +176,12 @@ b8 continues_inumber(const char c) {
     return starts_number(c);
 }
 
-b8 starts_register(const char c) {
+b8 starts_load_register(const char c) {
     return c == '$';
+}
+
+b8 starts_store_register(const char c) {
+    return c == '!';
 }
 
 size_t is_punctuation(const char c) {
@@ -261,7 +266,7 @@ NextToken next_token_number(const LexerState s) {
     }
 }
 
-NextToken next_token_register(const LexerState s) {
+NextToken next_token_load_register(const LexerState s) {
     const LexerState rest = _consume_lexer(s, '$');
     const NextToken nt = next_token_inumber(rest);
     assert(nt.token.text.buffer == s.view.buffer + 1);
@@ -269,7 +274,24 @@ NextToken next_token_register(const LexerState s) {
     return (NextToken) {
         .state = nt.state,
         .token = (Token) {
-            .type = TK_REGISTER,
+            .type = TK_LOAD_REGISTER,
+            .text = (StrView) {
+                .buffer = s.view.buffer,
+                .len = nt.token.text.len + 1,
+            },
+        },
+    };
+}
+
+NextToken next_token_store_register(const LexerState s) {
+    const LexerState rest = _consume_lexer(s, '!');
+    const NextToken nt = next_token_inumber(rest);
+    assert(nt.token.text.buffer == s.view.buffer + 1);
+    assert(nt.token.type == TK_NUMBER);
+    return (NextToken) {
+        .state = nt.state,
+        .token = (Token) {
+            .type = TK_STORE_REGISTER,
             .text = (StrView) {
                 .buffer = s.view.buffer,
                 .len = nt.token.text.len + 1,
@@ -348,8 +370,10 @@ NextToken next_token(const LexerState s) {
         size_t index;
         if (starts_number(c)) {
             return next_token_number(trimed);
-        } else if (starts_register(c)) {
-            return next_token_register(trimed);
+        } else if (starts_load_register(c)) {
+            return next_token_load_register(trimed);
+        } else if (starts_store_register(c)) {
+            return next_token_store_register(trimed);
         } else if ((index = is_punctuation(c)) < ARRAY_SIZE(punctuations)) {
             return (NextToken) {
                 .state = (LexerState) {
