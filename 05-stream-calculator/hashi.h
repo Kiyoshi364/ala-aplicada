@@ -51,6 +51,9 @@ typedef u32 b32;
 typedef u64 b64;
 typedef uword bword;
 
+// char types
+typedef u8 byte;
+
 // Allocator
 
 typedef struct{ u8 dummy; } Alloc;

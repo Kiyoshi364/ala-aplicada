@@ -18,7 +18,7 @@ typedef enum {
 } TokenType;
 
 typedef struct {
-    const char *buffer;
+    const byte *buffer;
     size_t len;
 } StrView;
 #define PRIVIEW ".*s"
@@ -120,7 +120,7 @@ StrView from_str_view(const char *buffer) {
         len += 1;
     }
     return (StrView) {
-        .buffer = buffer,
+        .buffer = (const byte *) buffer,
         .len = len,
     };
 }
