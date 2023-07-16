@@ -509,7 +509,7 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
             _lazyinvstream_ok((const LazyInvStream *) stream);
             fprintf(out, "(");
             print_Stream(out, stream->stream1);
-            fprintf(out, " Inv)");
+            fprintf(out, " %%)");
         } break;
         case STREAMTYPE_COUNT:
         DEFAULT_STREAM_CASE(stream);

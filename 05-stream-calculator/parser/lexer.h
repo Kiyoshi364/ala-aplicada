@@ -45,6 +45,7 @@ StrView drop_view(const StrView v, const size_t count);
 LexerState new_lexer(const StrView view);
 NextToken next_token(const LexerState s);
 
+iword read_inumber(const StrView view);
 fword read_number(const StrView view);
 
 #endif // _LEXER_H
