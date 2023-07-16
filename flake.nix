@@ -55,6 +55,11 @@
               ];
             };
 
+            calc = myShell {
+              name = "stream-calc";
+              buildInputs = with pkgs; [ rlwrap ];
+            };
+
             dot = myShell {
               name = "dot";
               buildInputs = with pkgs; [ graphviz ];
