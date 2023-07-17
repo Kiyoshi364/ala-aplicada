@@ -387,6 +387,9 @@ void print_repl(
     const ReplState repl,
     const size_t count
 ) {
+    if (repl.skip_newline) {
+        return;
+    }
     for (size_t i = 0; i < repl.stack_size; i += 1) {
         fprintf(stream, "(@_%zu|@%zu): ",
             i + 1,
