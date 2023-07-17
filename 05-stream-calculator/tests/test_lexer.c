@@ -47,13 +47,14 @@ int test_lexer_examples(TestCtx ctx) {
     int errs = 0;
     const LexerExample examples[] = {
         {
-            .input = "1 2 _3_ ; add mul $12 x tail\n",
+            .input = "1 2 _3_ ; add sub mul $12 x tail\n",
             .tokens = {
                 { TK_NUMBER, "1" },
                 { TK_NUMBER, "2" },
                 { TK_NUMBER, "_3_" },
                 { TK_SEMI_COLON, ";" },
                 { TK_KW_ADD, "add" },
+                { TK_KW_SUB, "sub" },
                 { TK_KW_MUL, "mul" },
                 { TK_LOAD_REGISTER, "$12" },
                 { TK_KW_X, "x" },
@@ -73,7 +74,7 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_KW_INV, "%" },
                 { TK_PUNCTUATION, "&" },
                 { TK_KW_MUL, "*" },
-                { TK_PUNCTUATION, "-" },
+                { TK_KW_SUB, "-" },
                 { TK_KW_ADD, "+" },
                 { TK_PUNCTUATION, "=" },
                 { TK_PUNCTUATION, "(" },

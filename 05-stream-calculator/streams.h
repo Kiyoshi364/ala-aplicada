@@ -9,6 +9,7 @@ enum _StreamType {
     NUMBER_STREAM,
     SHIFT_STREAM,
     LAZY_ADD_STREAM,
+    LAZY_SUB_STREAM,
     LAZY_MUL_STREAM,
     LAZY_INV_STREAM,
     STREAMTYPE_COUNT,
@@ -59,6 +60,10 @@ typedef struct {
 
 typedef struct {
     Stream header;
+} LazySubStream;
+
+typedef struct {
+    Stream header;
 } LazyMulStream;
 
 typedef struct {
@@ -68,6 +73,7 @@ typedef struct {
 fword head_Stream(const Stream stream[static 1]);
 const Stream* tail_Stream(Alloc alloc, const Stream stream[static 1]);
 const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]);
+const Stream* sub_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]);
 const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]);
 const Stream* inv_Stream(Alloc alloc, const Stream stream[static 1]);
 void print_Stream(FILE* out, const Stream stream[static 1]);
@@ -105,6 +111,7 @@ static const char *STREAM_TYPENAME[] = {
     "NUMBER",
     "SHIFT",
     "LAZY_ADD",
+    "LAZY_SUB",
     "LAZY_MUL",
     "LAZY_INV",
     "STREAMTYPE_COUNT",
@@ -135,6 +142,7 @@ static OneStream THE_ONE_STREAM = {
 #include "streams/number.c"
 #include "streams/shift.c"
 #include "streams/lazyadd.c"
+#include "streams/lazysub.c"
 #include "streams/lazymul.c"
 #include "streams/lazyinv.c"
 
@@ -169,6 +177,11 @@ const Stream* add_Number_Stream(Alloc alloc, const NumberStream ns[static 1], co
             _lazyaddstream_ok((const LazyAddStream *) b);
             result = (const Stream *) make_LazyAddStream(alloc, (const Stream *) ns, b);
         } break;
+        case LAZY_SUB_STREAM:
+        {
+            _lazysubstream_ok((const LazySubStream *) b);
+            result = (const Stream *) make_LazyAddStream(alloc, (const Stream *) ns, b);
+        } break;
         case LAZY_MUL_STREAM:
         {
             _lazymulstream_ok((const LazyMulStream *) b);
@@ -178,6 +191,59 @@ const Stream* add_Number_Stream(Alloc alloc, const NumberStream ns[static 1], co
         {
             _lazyinvstream_ok((const LazyInvStream *) b);
             result = (const Stream *) make_LazyAddStream(alloc, (const Stream *) ns, b);
+        } break;
+        case STREAMTYPE_COUNT:
+        DEFAULT_STREAM_CASE(b);
+    }
+    assert(result != NULL);
+    return result;
+}
+
+// ==================== Dispach SUB ====================
+
+const Stream* sub_Number_Stream(Alloc alloc, const NumberStream ns[static 1], const Stream b[static 1]) {
+    const Stream *result = NULL;
+    switch (b->typ.e) {
+        case ZERO_STREAM:
+        {
+            _zerostream_ok((const ZeroStream *) b);
+            result = (const Stream *) ns;
+        } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) b);
+        } // fallthrough
+        case NUMBER_STREAM:
+        {
+            _numberstream_ok((const NumberStream *) b);
+            const fword ha = local_head_NumberStream(*(const NumberStream *) ns);
+            const fword hb = local_head_NumberStream(*(const NumberStream *) b);
+            result = (const Stream *) make_NumberStream(alloc, ha - hb);
+        } break;
+        case SHIFT_STREAM:
+        {
+            _shiftstream_ok((const ShiftStream *) b);
+            result = (const Stream *) make_LazySubStream(alloc, (const Stream *) ns, b);
+        } break;
+        case LAZY_ADD_STREAM:
+        {
+            _lazyaddstream_ok((const LazyAddStream *) b);
+            result = (const Stream *) make_LazySubStream(alloc, (const Stream *) ns, b);
+        } break;
+        case LAZY_SUB_STREAM:
+        {
+            _lazysubstream_ok((const LazySubStream *) b);
+            result = (const Stream *) make_LazySubStream(alloc, (const Stream *) ns, b);
+        } break;
+        case LAZY_MUL_STREAM:
+        {
+            _lazymulstream_ok((const LazyMulStream *) b);
+            result = (const Stream *) make_LazySubStream(alloc, (const Stream *) ns, b);
+        } break;
+        case LAZY_INV_STREAM:
+        {
+            _lazyinvstream_ok((const LazyInvStream *) b);
+            result = (const Stream *) make_LazySubStream(alloc, (const Stream *) ns, b);
         } break;
         case STREAMTYPE_COUNT:
         DEFAULT_STREAM_CASE(b);
@@ -216,6 +282,11 @@ const Stream* mul_Number_Stream(Alloc alloc, const NumberStream ns[static 1], co
         case LAZY_ADD_STREAM:
         {
             _lazyaddstream_ok((const LazyAddStream *) b);
+            result = (const Stream *) make_LazyMulStream(alloc, (const Stream *) ns, b);
+        } break;
+        case LAZY_SUB_STREAM:
+        {
+            _lazysubstream_ok((const LazySubStream *) b);
             result = (const Stream *) make_LazyMulStream(alloc, (const Stream *) ns, b);
         } break;
         case LAZY_MUL_STREAM:
@@ -260,6 +331,10 @@ void _stream_ok(const Stream stream[static 1]) {
         {
             _lazyaddstream_ok((const LazyAddStream *) stream);
         } break;
+        case LAZY_SUB_STREAM:
+        {
+            _lazysubstream_ok((const LazySubStream *) stream);
+        } break;
         case LAZY_MUL_STREAM:
         {
             _lazymulstream_ok((const LazyMulStream *) stream);
@@ -300,6 +375,11 @@ fword head_Stream(const Stream stream[static 1]) {
         {
             _lazyaddstream_ok((const LazyAddStream *) stream);
             result = head_LazyAddStream((const LazyAddStream *) stream);
+        } break;
+        case LAZY_SUB_STREAM:
+        {
+            _lazysubstream_ok((const LazySubStream *) stream);
+            result = head_LazySubStream((const LazySubStream *) stream);
         } break;
         case LAZY_MUL_STREAM:
         {
@@ -349,6 +429,11 @@ const Stream* tail_Stream(Alloc alloc, const Stream stream[static 1]) {
             _lazyaddstream_ok((const LazyAddStream *) stream);
             result = (const Stream *) tail_LazyAddStream(alloc, (const LazyAddStream *) stream);
         } break;
+        case LAZY_SUB_STREAM:
+        {
+            _lazysubstream_ok((const LazySubStream *) stream);
+            result = (const Stream *) tail_LazySubStream(alloc, (const LazySubStream *) stream);
+        } break;
         case LAZY_MUL_STREAM:
         {
             _lazymulstream_ok((const LazyMulStream *) stream);
@@ -393,6 +478,7 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
         case SHIFT_STREAM:
         // TODO: Try to join (s + number)
         case LAZY_ADD_STREAM:
+        case LAZY_SUB_STREAM:
         case LAZY_MUL_STREAM:
         case LAZY_INV_STREAM:
         {
@@ -407,11 +493,71 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
                 case NUMBER_STREAM:
                 case SHIFT_STREAM:
                 case LAZY_ADD_STREAM:
+                case LAZY_SUB_STREAM:
                 case LAZY_MUL_STREAM:
                 case LAZY_INV_STREAM:
                 {
                     _stream_ok(b);
                     result = (const Stream *) make_LazyAddStream(alloc, a, b);
+                } break;
+                case STREAMTYPE_COUNT:
+                DEFAULT_STREAM_CASE2(a, b);
+            }
+        } break;
+        case STREAMTYPE_COUNT:
+        DEFAULT_STREAM_CASE2(a, b);
+    }
+    assert(result != NULL);
+    return result;
+}
+
+const Stream* sub_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]) {
+    const Stream *result = NULL;
+    switch (a->typ.e) {
+        case ZERO_STREAM:
+        {
+            _zerostream_ok((const ZeroStream *) a);
+            _stream_ok(b);
+            if (b->typ.e == ZERO_STREAM) {
+                result = a;
+            } else {
+                result = (const Stream *) make_LazySubStream(alloc, a, b);
+            }
+        } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) a);
+        } // fallthrough
+        case NUMBER_STREAM:
+        {
+            _numberstream_ok((const NumberStream *) a);
+            result = sub_Number_Stream(alloc, (const NumberStream *) a, b);
+        } break;
+        // TODO: Try to join (shift + shift)
+        case SHIFT_STREAM:
+        // TODO: Try to join (s + number)
+        case LAZY_ADD_STREAM:
+        case LAZY_SUB_STREAM:
+        case LAZY_MUL_STREAM:
+        case LAZY_INV_STREAM:
+        {
+            _stream_ok(a);
+            switch (b->typ.e) {
+                case ZERO_STREAM:
+                {
+                    _zerostream_ok((const ZeroStream *) b);
+                    result = a;
+                } break;
+                case ONE_STREAM:
+                case NUMBER_STREAM:
+                case SHIFT_STREAM:
+                case LAZY_ADD_STREAM:
+                case LAZY_SUB_STREAM:
+                case LAZY_MUL_STREAM:
+                case LAZY_INV_STREAM:
+                {
+                    _stream_ok(b);
+                    result = (const Stream *) make_LazySubStream(alloc, a, b);
                 } break;
                 case STREAMTYPE_COUNT:
                 DEFAULT_STREAM_CASE2(a, b);
@@ -448,6 +594,7 @@ const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
         case SHIFT_STREAM:
         // TODO: Try to join (s * number)
         case LAZY_ADD_STREAM:
+        case LAZY_SUB_STREAM:
         case LAZY_MUL_STREAM:
         case LAZY_INV_STREAM:
         {
@@ -466,6 +613,7 @@ const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
                 case NUMBER_STREAM:
                 case SHIFT_STREAM:
                 case LAZY_ADD_STREAM:
+                case LAZY_SUB_STREAM:
                 case LAZY_MUL_STREAM:
                 case LAZY_INV_STREAM:
                 {
@@ -510,6 +658,7 @@ const Stream* inv_Stream(Alloc alloc, const Stream stream[static 1]) {
             result = (const Stream *) make_ZeroStream(alloc);
         } break;
         case LAZY_ADD_STREAM:
+        case LAZY_SUB_STREAM:
         case LAZY_MUL_STREAM:
         {
             _stream_ok(stream);
@@ -557,6 +706,15 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
             fprintf(out, " ");
             print_Stream(out, stream->stream2);
             fprintf(out, " +)");
+        } break;
+        case LAZY_SUB_STREAM:
+        {
+            _lazysubstream_ok((const LazySubStream *) stream);
+            fprintf(out, "(");
+            print_Stream(out, stream->stream1);
+            fprintf(out, " ");
+            print_Stream(out, stream->stream2);
+            fprintf(out, " -)");
         } break;
         case LAZY_MUL_STREAM:
         {

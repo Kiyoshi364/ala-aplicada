@@ -8,6 +8,7 @@ typedef enum {
     TK_LOAD_REGISTER,
     TK_STORE_REGISTER,
     TK_KW_ADD,
+    TK_KW_SUB,
     TK_KW_MUL,
     TK_KW_INV,
     TK_KW_TAIL,
@@ -62,6 +63,7 @@ static char *token_to_name[] = {
     "TK_LOAD_REGISTER",
     "TK_STORE_REGISTER",
     "TK_KW_ADD",
+    "TK_KW_SUB",
     "TK_KW_MUL",
     "TK_KW_INV",
     "TK_KW_TAIL",
@@ -81,6 +83,7 @@ static struct {
     const char *key;
 } keywords[] = {
     { TK_KW_ADD, "add" },
+    { TK_KW_SUB, "sub" },
     { TK_KW_MUL, "mul" },
     { TK_KW_INV, "inv" },
     { TK_KW_TAIL, "tail" },
@@ -93,6 +96,7 @@ static struct {
     char key;
 } punctuations[] = {
     { TK_KW_ADD, '+' },
+    { TK_KW_SUB, '-' },
     { TK_KW_MUL, '*' },
     { TK_KW_INV, '%' },
     { TK_SEMI_COLON, ';' },

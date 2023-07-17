@@ -22,5 +22,5 @@ set +x
 if [ ${total_errs} -eq 0 ]; then
   echo "Summary: All ok!"
 else
-  echo "Summary: Found ${total_errs} in all tests!"
+  echo "Summary: Found ${total_errs} errors in all tests!"
 fi

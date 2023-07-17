@@ -136,6 +136,23 @@ ReplState add_repl(FILE *stream, const ReplState old_repl) {
     return repl;
 }
 
+ReplState sub_repl(FILE *stream, const ReplState old_repl) {
+    ReplState repl = old_repl;
+    if (repl.stack_size < 2) {
+        warning(stream,
+            "stack underflow: attempt on subtracting, but stack size is '%zu',"
+            " ignoring sub",
+            repl.stack_size
+        );
+    } else {
+        const Stream *s1 = repl.stack[repl.stack_size-2];
+        const Stream *s2 = repl.stack[repl.stack_size-1];
+        repl.stack[repl.stack_size-2] = sub_Stream(repl.alloc, s1, s2);
+        repl.stack_size -= 1;
+    }
+    return repl;
+}
+
 ReplState mul_repl(FILE *stream, const ReplState old_repl) {
     ReplState repl = old_repl;
     if (repl.stack_size < 2) {
@@ -265,6 +282,9 @@ ReplState eval_repl(
             } break;
             case TK_KW_ADD: {
                 repl = add_repl(stream, repl);
+            } break;
+            case TK_KW_SUB: {
+                repl = sub_repl(stream, repl);
             } break;
             case TK_KW_MUL: {
                 repl = mul_repl(stream, repl);

@@ -5,6 +5,7 @@
 
 #include "test.h"
 
+static inline
 int test_zero(TestCtx ctx) {
     int errs = 0;
     const ZeroStream *z0 = make_ZeroStream(ctx.alloc);
@@ -49,6 +50,7 @@ int test_zero(TestCtx ctx) {
     return errs;
 }
 
+static inline
 int test_number(TestCtx ctx) {
     int errs = 0;
 
@@ -107,6 +109,7 @@ int test_number(TestCtx ctx) {
     return errs;
 }
 
+static inline
 int test_shift(TestCtx ctx) {
     int errs = 0;
 
@@ -170,9 +173,86 @@ int test_shift(TestCtx ctx) {
     return errs;
 }
 
+static inline
+int input_test_not_comm(
+    TestCtx ctx,
+    const Stream* (*operation)(Alloc, const Stream[1], const Stream[1]),
+    const char *op_name,
+    size_t n,
+    const Stream* streams[n][3],
+    const size_t depths[n]
+) {
+    int errs = 0;
+    for (size_t i = 0; i < n; i += 1) {
+        int this_errs = 0;
+        const Stream *a = streams[i][0];
+        const Stream *b = streams[i][1];
+        const Stream *const expected = streams[i][2];
+        const Stream *const result = operation(ctx.alloc, a, b);
+
+        if (depths[i] > 0) {
+            const fword head = head_Stream(result);
+            const fword expected_head = head_Stream(expected);
+            TEST (head - expected_head < EPSILON) {
+                this_errs += 1;
+                ON_FIRST_ERR({
+                    fprintf(ctx.out, "Head of the %s of ", op_name);
+                    debug_Stream(ctx.out, a);
+                    fprintf(ctx.out, " and ");
+                    debug_Stream(ctx.out, b);
+                    fprintf(ctx.out, ", namelly ");
+                    debug_Stream(ctx.out, result);
+                    fprintf(ctx.out, ", should be %"PRIfPTR", but is %"PRIfPTR
+                        ". The expected sum is ",
+                        head, expected_head);
+                    debug_Streamln(ctx.out, expected);
+                });
+            }
+        } else {
+            assert(depths[i] > 0);
+        }
+
+        const Stream *curr = result;
+        const Stream *expected_curr = expected;
+        for (size_t depth = 1; depth < depths[i]; depth += 1) {
+            curr = tail_Stream(ctx.alloc, curr);
+            expected_curr = tail_Stream(ctx.alloc, expected_curr);
+            const fword head = head_Stream(curr);
+            const fword expected_head = head_Stream(expected_curr);
+            TEST (head - expected_head < EPSILON) {
+                this_errs += 1;
+                ON_FIRST_ERR({
+                    fprintf(ctx.out, "At depth %zu, the head of the sum of ",
+                        depth);
+                    debug_Stream(ctx.out, a);
+                    fprintf(ctx.out, " and ");
+                    debug_Stream(ctx.out, b);
+                    fprintf(ctx.out, ", namelly ");
+                    debug_Stream(ctx.out, curr);
+                    fprintf(ctx.out, ", should be %"PRIfPTR", but is %"PRIfPTR
+                        ". The expected sum is ",
+                        head, expected_head);
+                    debug_Streamln(ctx.out, expected_curr);
+                });
+            }
+        }
+
+        if (this_errs) {
+            errs += 1;
+            fprintf(ctx.out, "displaying expected stream:\n");
+            print_N_Streamln(ctx.out, ctx.alloc, expected, depths[i]);
+            fprintf(ctx.out, "displaying result stream:\n");
+            print_N_Streamln(ctx.out, ctx.alloc, result, depths[i]);
+        }
+    }
+    return errs;
+}
+
+static inline
 int input_test_comm(
     TestCtx ctx,
     const Stream* (*operation)(Alloc, const Stream[1], const Stream[1]),
+    const char *op_name,
     size_t n,
     const Stream* streams[n][3],
     const size_t depths[n]
@@ -192,7 +272,7 @@ int input_test_comm(
                 TEST (head - expected_head < EPSILON) {
                     this_errs += 1;
                     ON_FIRST_ERR({
-                        fprintf(ctx.out, "Head of the sum of ");
+                        fprintf(ctx.out, "Head of the %s of ", op_name);
                         debug_Stream(ctx.out, a);
                         fprintf(ctx.out, " and ");
                         debug_Stream(ctx.out, b);
@@ -245,6 +325,7 @@ int input_test_comm(
     return errs;
 }
 
+static inline
 int test_add_comm(TestCtx ctx) {
     int errs = 0;
 
@@ -297,12 +378,86 @@ int test_add_comm(TestCtx ctx) {
     CASSERT(ARRAY_SIZE(depths) == ARRAY_SIZE(streams), ADD_DEPTHS_SIZE_EQ_STREAM_SIZE);
 
     errs += input_test_comm(
-        ctx, add_Stream,
+        ctx, add_Stream, "sum",
         ARRAY_SIZE(streams), streams, depths
     );
     return errs;
 }
 
+static inline
+int test_sub(TestCtx ctx) {
+    int errs = 0;
+
+    const Stream *n5 = (const Stream *) make_NumberStream(ctx.alloc, 5.0);
+    const Stream *n_5 = (const Stream *) make_NumberStream(ctx.alloc, -5.0);
+    const Stream *n10 = (const Stream *) make_NumberStream(ctx.alloc, 10.0);
+    const Stream *n_10 = (const Stream *) make_NumberStream(ctx.alloc, -10.0);
+    const Stream *n15 = (const Stream *) make_NumberStream(ctx.alloc, 15.0);
+    const Stream *n25 = (const Stream *) make_NumberStream(ctx.alloc, 25.0);
+
+    const size_t depths[] = {
+        3, 3, 3, 6, 3, 3, 3
+    };
+
+    const Stream *streams[][3] = {
+        {
+            n15,
+            n10,
+            n5,
+        }, {
+            (const Stream *) make_ZeroStream(ctx.alloc),
+            n10,
+            n_10,
+        }, {
+            n10,
+            (const Stream *) make_ZeroStream(ctx.alloc),
+            n10,
+        }, {
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                n10,
+                2
+            ),
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                n15,
+                2
+            ),
+            (const Stream *) make_ShiftStream(ctx.alloc,
+                n_5,
+                2
+            ),
+        }, {
+            (const Stream *) make_LazyAddStream(ctx.alloc,
+                n10,
+                n25
+            ),
+            (const Stream *) make_NumberStream(ctx.alloc, 7),
+            (const Stream *) make_NumberStream(ctx.alloc, 28.0),
+        }, {
+            (const Stream *) make_LazySubStream(ctx.alloc,
+                n10,
+                n25
+            ),
+            (const Stream *) make_NumberStream(ctx.alloc, 7),
+            (const Stream *) make_NumberStream(ctx.alloc, -12.0),
+        }, {
+            (const Stream *) make_LazyMulStream(ctx.alloc,
+                n10,
+                (const Stream *) make_NumberStream(ctx.alloc, 5.0)
+            ),
+            (const Stream *) make_NumberStream(ctx.alloc, 1.0),
+            (const Stream *) make_NumberStream(ctx.alloc, 49.0),
+        }
+    };
+    CASSERT(ARRAY_SIZE(depths) == ARRAY_SIZE(streams), SUB_DEPTHS_SIZE_EQ_STREAM_SIZE);
+
+    errs += input_test_not_comm(
+        ctx, sub_Stream, "sub",
+        ARRAY_SIZE(streams), streams, depths
+    );
+    return errs;
+}
+
+static inline
 int test_mul_comm(TestCtx ctx) {
     int errs = 0;
 
@@ -355,12 +510,13 @@ int test_mul_comm(TestCtx ctx) {
     CASSERT(ARRAY_SIZE(depths) == ARRAY_SIZE(streams), MUL_DEPTHS_SIZE_EQ_STREAM_SIZE);
 
     errs += input_test_comm(
-        ctx, mul_Stream,
+        ctx, mul_Stream, "mul",
         ARRAY_SIZE(streams), streams, depths
     );
     return errs;
 }
 
+static inline
 int test_inv(TestCtx ctx) {
     int errs = 0;
 
@@ -471,6 +627,7 @@ int test_all(TestCtx ctx) {
     RUN_TEST(test_number, ctx, errs);
     RUN_TEST(test_shift, ctx, errs);
     RUN_TEST(test_add_comm, ctx, errs);
+    RUN_TEST(test_sub, ctx, errs);
     RUN_TEST(test_mul_comm, ctx, errs);
     RUN_TEST(test_inv, ctx, errs);
     // TODO test_add_assoc
