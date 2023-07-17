@@ -10,6 +10,7 @@ typedef enum {
     TK_KW_ADD,
     TK_KW_MUL,
     TK_KW_INV,
+    TK_KW_TAIL,
     TK_KW_X,
     TK_BEGIN_COMMENT,
     TK_NEW_LINE,
@@ -63,6 +64,7 @@ static char *token_to_name[] = {
     "TK_KW_ADD",
     "TK_KW_MUL",
     "TK_KW_INV",
+    "TK_KW_TAIL",
     "TK_KW_X",
     "TK_BEGIN_COMMENT",
     "TK_NEW_LINE",
@@ -81,6 +83,7 @@ static struct {
     { TK_KW_ADD, "add" },
     { TK_KW_MUL, "mul" },
     { TK_KW_INV, "inv" },
+    { TK_KW_TAIL, "tail" },
     { TK_KW_X, "x" },
     { TK_NEW_LINE, "\n" },
 };
@@ -94,6 +97,7 @@ static struct {
     { TK_KW_INV, '%' },
     { TK_SEMI_COLON, ';' },
     { TK_BEGIN_COMMENT, '#' },
+    { TK_KW_TAIL, '\'' },
     { TK_NEW_LINE, '\n' },
     // Ignored
     { TK_PUNCTUATION, '@' },

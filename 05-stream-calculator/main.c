@@ -168,6 +168,21 @@ ReplState inv_repl(FILE *stream, const ReplState old_repl) {
     return repl;
 }
 
+ReplState tail_repl(FILE *stream, const ReplState old_repl) {
+    ReplState repl = old_repl;
+    if (repl.stack_size < 1) {
+        warning(stream,
+            "stack underflow: attempt on tail, but stack size is '%zu',"
+            " ignoring tail",
+            repl.stack_size
+        );
+    } else {
+        const Stream *s1 = repl.stack[repl.stack_size-1];
+        repl.stack[repl.stack_size-1] = tail_Stream(repl.alloc, s1);
+    }
+    return repl;
+}
+
 ReplState push_x_repl(
     FILE *stream,
     const ReplState old_repl
@@ -256,6 +271,9 @@ ReplState eval_repl(
             } break;
             case TK_KW_INV: {
                 repl = inv_repl(stream, repl);
+            } break;
+            case TK_KW_TAIL: {
+                repl = tail_repl(stream, repl);
             } break;
             case TK_KW_X: {
                 repl = push_x_repl(stream, repl);
