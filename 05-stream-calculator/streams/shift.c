@@ -30,6 +30,10 @@ const ShiftStream* make_ShiftStream(Alloc alloc, const Stream stream[static 1], 
     return p;
 }
 
+const ShiftStream* make_XStream(Alloc alloc) {
+    return make_ShiftStream(alloc, (const Stream *) &THE_ONE_STREAM, 0);
+}
+
 fword head_ShiftStream(const ShiftStream stream[static 1]) {
     _shiftstream_ok(stream);
     return 0;

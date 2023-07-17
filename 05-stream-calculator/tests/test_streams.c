@@ -110,11 +110,8 @@ int test_number(TestCtx ctx) {
 int test_shift(TestCtx ctx) {
     int errs = 0;
 
-    const Stream *n1 = (const Stream *) make_NumberStream(ctx.alloc, 1.0);
-    const Stream *x = (const Stream *) make_ShiftStream(ctx.alloc,
-        n1,
-        0
-    );
+    const Stream *n1 = (const Stream *) make_OneStream(ctx.alloc);
+    const Stream *x = (const Stream *) make_XStream(ctx.alloc);
     const uword count = 3;
     const Stream *xcount = (const Stream *) make_ShiftStream(ctx.alloc,
         n1,
