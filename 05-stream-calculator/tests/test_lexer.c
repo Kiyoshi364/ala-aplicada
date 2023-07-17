@@ -72,14 +72,14 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_EOF, "" },
             },
         }, {
-            .input = "x'!0@#$0%&*-+=()[]{},.<>:~^0/\\|?",
+            .input = "x'!@#$%&*-+=()[]{},.<>:~^/\\|?",
             .tokens = {
                 { TK_KW_X, "x" },
                 { TK_KW_TAIL, "'" },
-                { TK_STORE_REGISTER, "!0" },
+                { TK_STORE_REGISTER, "!" },
                 { TK_PUNCTUATION, "@" },
                 { TK_BEGIN_COMMENT, "#" },
-                { TK_LOAD_REGISTER, "$0" },
+                { TK_LOAD_REGISTER, "$" },
                 { TK_KW_INV, "%" },
                 { TK_PUNCTUATION, "&" },
                 { TK_KW_MUL, "*" },
@@ -98,7 +98,7 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_PUNCTUATION, ">" },
                 { TK_PUNCTUATION, ":" },
                 { TK_PUNCTUATION, "~" },
-                { TK_SHIFT_BY, "^0" },
+                { TK_SHIFT_BY, "^" },
                 { TK_PUNCTUATION, "/" },
                 { TK_PUNCTUATION, "\\" },
                 { TK_PUNCTUATION, "|" },
@@ -121,6 +121,15 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_STORE_REGISTER, "!0_0" },
                 { TK_STORE_REGISTER, "!123___4" },
                 { TK_STORE_REGISTER, "!_3" },
+                { TK_EOF, "" },
+            },
+        }, {
+            .input = "^_\t^0_0\r\x1b^123___4\x1b^_3",
+            .tokens = {
+                { TK_SHIFT_BY, "^_" },
+                { TK_SHIFT_BY, "^0_0" },
+                { TK_SHIFT_BY, "^123___4" },
+                { TK_SHIFT_BY, "^_3" },
                 { TK_EOF, "" },
             },
         }, {

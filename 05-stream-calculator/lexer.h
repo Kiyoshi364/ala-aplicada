@@ -461,9 +461,12 @@ iword _local_read_inumber(const StrView view, iword *out_sign, size_t *in_out_i)
 }
 
 iword read_inumber(const StrView view) {
-    iword sign;
+    iword sign = 1;
     size_t i = 0;
-    iword v = _local_read_inumber(view, &sign, &i);
+    iword v = 0;
+    if (view.len > 0) {
+        v = _local_read_inumber(view, &sign, &i);
+    }
 
     assert(i == view.len);
     return sign * v;

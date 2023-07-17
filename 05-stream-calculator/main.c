@@ -246,7 +246,7 @@ size_t parse_register(
     const StrView view,
     const char start_char
 ) {
-    assert(view.len > 1 && view.buffer[0] == start_char);
+    assert(view.len > 0 && view.buffer[0] == start_char);
     const iword i_reg = read_inumber(
         drop_view(view, 1)
     );
@@ -272,7 +272,7 @@ size_t parse_count(
     FILE *stream,
     const StrView view
 ) {
-    assert(view.len > 1 && view.buffer[0] == '^');
+    assert(view.len > 0 && view.buffer[0] == '^');
     const iword i_count = read_inumber(
         drop_view(view, 1)
     );
