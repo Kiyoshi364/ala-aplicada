@@ -168,6 +168,24 @@ ReplState inv_repl(FILE *stream, const ReplState old_repl) {
     return repl;
 }
 
+ReplState push_x_repl(
+    FILE *stream,
+    const ReplState old_repl
+) {
+    ReplState repl = old_repl;
+    if (!(repl.stack_size < STACK_LEN)) {
+        warning(stream,
+            "stack overflow: attempt on push 'x',"
+            " ignoring push"
+        );
+    } else {
+        const Stream *x = (const Stream *) make_XStream(repl.alloc);
+        repl.stack[repl.stack_size] = x;
+        repl.stack_size += 1;
+    }
+    return repl;
+}
+
 size_t parse_register(
     FILE *stream,
     const StrView view,
@@ -238,6 +256,9 @@ ReplState eval_repl(
             } break;
             case TK_KW_INV: {
                 repl = inv_repl(stream, repl);
+            } break;
+            case TK_KW_X: {
+                repl = push_x_repl(stream, repl);
             } break;
             case TK_BEGIN_COMMENT: {
                 found_comment = 1;
