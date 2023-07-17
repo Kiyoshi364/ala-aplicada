@@ -7,6 +7,7 @@ typedef enum {
     TK_NUMBER,
     TK_LOAD_REGISTER,
     TK_STORE_REGISTER,
+    TK_SHIFT_BY,
     TK_KW_ADD,
     TK_KW_SUB,
     TK_KW_MUL,
@@ -62,6 +63,7 @@ static char *token_to_name[] = {
     "TK_NUMBER",
     "TK_LOAD_REGISTER",
     "TK_STORE_REGISTER",
+    "TK_SHIFT_BY",
     "TK_KW_ADD",
     "TK_KW_SUB",
     "TK_KW_MUL",
@@ -120,7 +122,6 @@ static struct {
     { TK_PUNCTUATION, '>' },
     { TK_PUNCTUATION, ':' },
     { TK_PUNCTUATION, '~' },
-    { TK_PUNCTUATION, '^' },
     { TK_PUNCTUATION, '/' },
     { TK_PUNCTUATION, '\\' },
     { TK_PUNCTUATION, '|' },
@@ -193,6 +194,10 @@ b8 starts_load_register(const char c) {
 
 b8 starts_store_register(const char c) {
     return c == '!';
+}
+
+b8 starts_shift_by(const char c) {
+    return c == '^';
 }
 
 size_t is_punctuation(const char c) {
@@ -311,6 +316,23 @@ NextToken next_token_store_register(const LexerState s) {
     };
 }
 
+NextToken next_token_shift_by(const LexerState s) {
+    const LexerState rest = _consume_lexer(s, '^');
+    const NextToken nt = next_token_inumber(rest);
+    assert(nt.token.text.buffer == s.view.buffer + 1);
+    assert(nt.token.type == TK_NUMBER);
+    return (NextToken) {
+        .state = nt.state,
+        .token = (Token) {
+            .type = TK_SHIFT_BY,
+            .text = (StrView) {
+                .buffer = s.view.buffer,
+                .len = nt.token.text.len + 1,
+            },
+        },
+    };
+}
+
 size_t find_keyword(StrView view) {
     size_t i = 0;
     for (; i < ARRAY_SIZE(keywords); i += 1) {
@@ -385,6 +407,8 @@ NextToken next_token(const LexerState s) {
             return next_token_load_register(trimed);
         } else if (starts_store_register(c)) {
             return next_token_store_register(trimed);
+        } else if (starts_shift_by(c)) {
+            return next_token_shift_by(trimed);
         } else if ((index = is_punctuation(c)) < ARRAY_SIZE(punctuations)) {
             return (NextToken) {
                 .state = (LexerState) {

@@ -63,7 +63,7 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_EOF, "" },
             },
         }, {
-            .input = "x'!0@#$0%&*-+=()[]{},.<>:~^/\\|?",
+            .input = "x'!0@#$0%&*-+=()[]{},.<>:~^0/\\|?",
             .tokens = {
                 { TK_KW_X, "x" },
                 { TK_KW_TAIL, "'" },
@@ -89,7 +89,7 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_PUNCTUATION, ">" },
                 { TK_PUNCTUATION, ":" },
                 { TK_PUNCTUATION, "~" },
-                { TK_PUNCTUATION, "^" },
+                { TK_SHIFT_BY, "^0" },
                 { TK_PUNCTUATION, "/" },
                 { TK_PUNCTUATION, "\\" },
                 { TK_PUNCTUATION, "|" },

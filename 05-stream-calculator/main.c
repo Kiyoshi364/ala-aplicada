@@ -119,6 +119,29 @@ ReplState pop_register_repl(
     return repl;
 }
 
+ReplState shift_by_repl(FILE *stream, const ReplState old_repl, const size_t count) {
+    ReplState repl = old_repl;
+    if (repl.stack_size < 1) {
+        warning(stream,
+            "stack underflow: attempt on shifting, but stack size is '%zu',"
+            " ignoring shift",
+            repl.stack_size
+        );
+    } else {
+        if (count <= 0) {
+            warning(stream,
+                "count is '%zu' on shifting,"
+                " ignoring shift",
+                count
+            );
+        } else {
+            const Stream *s1 = repl.stack[repl.stack_size-1];
+            repl.stack[repl.stack_size-1] = (const Stream *) make_ShiftStream(repl.alloc, s1, count - 1);
+        }
+    }
+    return repl;
+}
+
 ReplState add_repl(FILE *stream, const ReplState old_repl) {
     ReplState repl = old_repl;
     if (repl.stack_size < 2) {
@@ -230,19 +253,37 @@ size_t parse_register(
     size_t reg = (size_t) (i_reg < 0 ? -i_reg : i_reg);
     if (i_reg < 0) {
         warning(stream,
-            "register is negative, using '$%zu' instead",
-            reg
+            "register is negative, using '%c%zu' instead",
+            start_char, reg
         );
     }
     if (!(reg < REGISTER_COUNT)) {
         reg = REGISTER_COUNT - 1;
         warning(stream,
-            "register is out of bounds (%zu), using '$%zu' instead",
+            "register is out of bounds (%zu), using '%c%zu' instead",
             (size_t) REGISTER_COUNT,
-            reg
+            start_char, reg
         );
     }
     return reg;
+}
+
+size_t parse_count(
+    FILE *stream,
+    const StrView view
+) {
+    assert(view.len > 1 && view.buffer[0] == '^');
+    const iword i_count = read_inumber(
+        drop_view(view, 1)
+    );
+    size_t count = (size_t) (i_count < 0 ? -i_count : i_count);
+    if (i_count < 0) {
+        warning(stream,
+            "count is negative, using '^%zu' instead",
+            count
+        );
+    }
+    return count;
 }
 
 ReplState eval_repl(
@@ -279,6 +320,11 @@ ReplState eval_repl(
                 const size_t reg =
                     parse_register(stream, token.text, '!');
                 repl = pop_register_repl(stream, repl, reg);
+            } break;
+            case TK_SHIFT_BY: {
+                const size_t count =
+                    parse_count(stream, token.text);
+                repl = shift_by_repl(stream, repl, count);
             } break;
             case TK_KW_ADD: {
                 repl = add_repl(stream, repl);
