@@ -338,12 +338,12 @@ size_t find_keyword(StrView view) {
     for (; i < ARRAY_SIZE(keywords); i += 1) {
         b8 ok = 1;
         size_t j = 0;
-        for (; ok && keywords[i].key[j]; j += 1) {
+        for (; ok && keywords[i].key[j] && j < view.len; j += 1) {
             if (view.buffer[j] != keywords[i].key[j]) {
                 ok = 0;
             }
         }
-        if (ok) {
+        if (ok && j == view.len) {
             break;
         } else {
             continue;

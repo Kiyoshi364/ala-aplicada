@@ -63,6 +63,15 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_EOF, "" },
             },
         }, {
+            .input = "addaa subb multiplication taila",
+            .tokens = {
+                { TK_ID, "addaa" },
+                { TK_ID, "subb" },
+                { TK_ID, "multiplication" },
+                { TK_ID, "taila" },
+                { TK_EOF, "" },
+            },
+        }, {
             .input = "x'!0@#$0%&*-+=()[]{},.<>:~^0/\\|?",
             .tokens = {
                 { TK_KW_X, "x" },
