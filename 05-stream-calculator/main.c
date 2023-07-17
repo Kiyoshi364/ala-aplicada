@@ -168,6 +168,33 @@ ReplState inv_repl(FILE *stream, const ReplState old_repl) {
     return repl;
 }
 
+size_t parse_register(
+    FILE *stream,
+    const StrView view,
+    const char start_char
+) {
+    assert(view.len > 1 && view.buffer[0] == start_char);
+    const iword i_reg = read_inumber(
+        drop_view(view, 1)
+    );
+    size_t reg = (size_t) (i_reg < 0 ? -i_reg : i_reg);
+    if (i_reg < 0) {
+        warning(stream,
+            "register is negative, using '$%zu' instead",
+            reg
+        );
+    }
+    if (!(reg < REGISTER_COUNT)) {
+        reg = REGISTER_COUNT - 1;
+        warning(stream,
+            "register is out of bounds (%zu), using '$%zu' instead",
+            (size_t) REGISTER_COUNT,
+            reg
+        );
+    }
+    return reg;
+}
+
 ReplState eval_repl(
     FILE *stream,
     const ReplState old_repl,
@@ -194,47 +221,13 @@ ReplState eval_repl(
                 repl = push_number_repl(stream, repl, number);
             } break;
             case TK_LOAD_REGISTER: {
-                assert(token.text.len > 1 && token.text.buffer[0] == '$');
-                const iword i_reg = read_inumber(
-                    drop_view(token.text, 1)
-                );
-                size_t reg = (size_t) (i_reg < 0 ? -i_reg : i_reg);
-                if (i_reg < 0) {
-                    warning(stream,
-                        "register is negative, using '$%zu' instead",
-                        reg
-                    );
-                }
-                if (!(reg < REGISTER_COUNT)) {
-                    reg = REGISTER_COUNT - 1;
-                    warning(stream,
-                        "register is out of bounds (%zu), using '$%zu' instead",
-                        (size_t) REGISTER_COUNT,
-                        reg
-                    );
-                }
+                const size_t reg =
+                    parse_register(stream, token.text, '$');
                 repl = push_register_repl(stream, repl, reg);
             } break;
             case TK_STORE_REGISTER: {
-                assert(token.text.len > 1 && token.text.buffer[0] == '!');
-                const iword i_reg = read_inumber(
-                    drop_view(token.text, 1)
-                );
-                size_t reg = (size_t) (i_reg < 0 ? -i_reg : i_reg);
-                if (i_reg < 0) {
-                    warning(stream,
-                        "register is negative, using '$%zu' instead",
-                        reg
-                    );
-                }
-                if (!(reg < REGISTER_COUNT)) {
-                    reg = REGISTER_COUNT - 1;
-                    warning(stream,
-                        "register is out of bounds (%zu), using '$%zu' instead",
-                        (size_t) REGISTER_COUNT,
-                        reg
-                    );
-                }
+                const size_t reg =
+                    parse_register(stream, token.text, '!');
                 repl = pop_register_repl(stream, repl, reg);
             } break;
             case TK_KW_ADD: {
