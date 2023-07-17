@@ -5,6 +5,7 @@
 
 enum _StreamType {
     ZERO_STREAM,
+    ONE_STREAM,
     NUMBER_STREAM,
     SHIFT_STREAM,
     LAZY_ADD_STREAM,
@@ -39,6 +40,10 @@ CASSERT(sizeof(((Stream*)0)->data2) == sizeof(((Stream*)0)->stream2), NUMBER_T_F
 typedef struct {
     Stream header;
 } ZeroStream;
+
+typedef struct {
+    Stream header;
+} OneStream;
 
 typedef struct {
     Stream header;
@@ -96,6 +101,7 @@ void print_N_Streamln(FILE* out, Alloc alloc, const Stream stream[static 1], con
 
 static const char *STREAM_TYPENAME[] = {
     "ZERO",
+    "ONE",
     "NUMBER",
     "SHIFT",
     "LAZY_ADD",
@@ -115,7 +121,17 @@ static ZeroStream THE_ZERO_STREAM = {
     },
 };
 
+static OneStream THE_ONE_STREAM = {
+    .header = {
+        .typ = { ONE_STREAM },
+        .len = sizeof(THE_ONE_STREAM),
+        .data = 1,
+        .data2 = 0,
+    },
+};
+
 #include "streams/zero.c"
+#include "streams/one.c"
 #include "streams/number.c"
 #include "streams/shift.c"
 #include "streams/lazyadd.c"
@@ -132,6 +148,10 @@ const Stream* add_Number_Stream(Alloc alloc, const NumberStream ns[static 1], co
             _zerostream_ok((const ZeroStream *) b);
             result = (const Stream *) ns;
         } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) b);
+        } // fallthrough
         case NUMBER_STREAM:
         {
             _numberstream_ok((const NumberStream *) b);
@@ -176,6 +196,11 @@ const Stream* mul_Number_Stream(Alloc alloc, const NumberStream ns[static 1], co
             _zerostream_ok((const ZeroStream *) b);
             result = b;
         } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) b);
+            result = (const Stream *) ns;
+        } break;
         case NUMBER_STREAM:
             _numberstream_ok((const NumberStream *) b);
             const fword ha = local_head_NumberStream(*(const NumberStream *) ns);
@@ -219,6 +244,10 @@ void _stream_ok(const Stream stream[static 1]) {
         {
             _zerostream_ok((const ZeroStream *) stream);
         } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) stream);
+        } break;
         case NUMBER_STREAM:
         {
             _numberstream_ok((const NumberStream *) stream);
@@ -251,6 +280,11 @@ fword head_Stream(const Stream stream[static 1]) {
         {
             _zerostream_ok((const ZeroStream *) stream);
             result = 0.0;
+        } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) stream);
+            result = 1.0;
         } break;
         case NUMBER_STREAM:
         {
@@ -296,6 +330,10 @@ const Stream* tail_Stream(Alloc alloc, const Stream stream[static 1]) {
             _zerostream_ok((const ZeroStream *) stream);
             result = stream;
         } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) stream);
+        } // fallthrough
         case NUMBER_STREAM:
         {
             _numberstream_ok((const NumberStream *) stream);
@@ -342,6 +380,10 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
             _stream_ok(b);
             result = b;
         } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) a);
+        } // fallthrough
         case NUMBER_STREAM:
         {
             _numberstream_ok((const NumberStream *) a);
@@ -361,6 +403,7 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
                     _zerostream_ok((const ZeroStream *) b);
                     result = a;
                 } break;
+                case ONE_STREAM:
                 case NUMBER_STREAM:
                 case SHIFT_STREAM:
                 case LAZY_ADD_STREAM:
@@ -390,6 +433,12 @@ const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
             _stream_ok(b);
             result = a;
         } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) a);
+            _stream_ok(b);
+            result = b;
+        } break;
         case NUMBER_STREAM:
         {
             _numberstream_ok((const NumberStream *) a);
@@ -408,6 +457,11 @@ const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
                 {
                     _zerostream_ok((const ZeroStream *) b);
                     result = b;
+                } break;
+                case ONE_STREAM:
+                {
+                    _onestream_ok((const OneStream *) b);
+                    result = a;
                 } break;
                 case NUMBER_STREAM:
                 case SHIFT_STREAM:
@@ -436,6 +490,11 @@ const Stream* inv_Stream(Alloc alloc, const Stream stream[static 1]) {
         {
             _zerostream_ok((const ZeroStream *) stream);
             // NOTE: it is not defined
+            result = stream;
+        } break;
+        case ONE_STREAM:
+        {
+            _onestream_ok((const OneStream *) stream);
             result = stream;
         } break;
         case NUMBER_STREAM:
@@ -474,6 +533,10 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
         {
             print_ZeroStream(out, (const ZeroStream *) stream);
         } break;
+        case ONE_STREAM:
+        {
+            print_OneStream(out, (const OneStream *) stream);
+        } break;
         case NUMBER_STREAM:
         {
             print_NumberStream(out, (const NumberStream *) stream);
@@ -484,7 +547,7 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
             fprintf(out, "(");
             print_Stream(out, stream->stream1);
             fprintf(out, " ");
-            fprintf(out, "%"PRIuPTR" Shift)", (stream->data2) + 1);
+            fprintf(out, "^%"PRIuPTR")", (stream->data2) + 1);
         } break;
         case LAZY_ADD_STREAM:
         {

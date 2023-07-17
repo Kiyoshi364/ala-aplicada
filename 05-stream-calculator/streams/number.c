@@ -2,7 +2,9 @@
 
 inline static
 void _local_numberstream_ok(NumberStream ns) {
-    assert(ns.header.typ.e == NUMBER_STREAM);
+    assert(ns.header.typ.e == NUMBER_STREAM
+        || ns.header.typ.e == ONE_STREAM
+    );
     assert(ns.header.len == sizeof(NumberStream));
     assert(ns.header.data2 == 0);
 }
@@ -24,10 +26,16 @@ NumberStream local_NumberStream(fword number) {
 }
 
 const NumberStream* make_NumberStream(Alloc alloc, fword number) {
-    NumberStream *p = ALLOCATE_ONE(alloc, NumberStream);
-    assert(p);
-    *p = local_NumberStream(number);
-    return p;
+    if (number == 0.0) {
+        return (const NumberStream *) make_ZeroStream(alloc);
+    } else if (number == 1.0) {
+        return (const NumberStream *) make_OneStream(alloc);
+    } else {
+        NumberStream *p = ALLOCATE_ONE(alloc, NumberStream);
+        assert(p);
+        *p = local_NumberStream(number);
+        return p;
+    }
 }
 
 fword local_head_NumberStream(NumberStream stream) {
