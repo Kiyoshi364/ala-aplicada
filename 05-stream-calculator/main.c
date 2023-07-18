@@ -119,6 +119,38 @@ ReplState pop_register_repl(
     return repl;
 }
 
+ReplState push_stack_repl(
+    FILE *stream,
+    const ReplState old_repl,
+    const iword i_stk
+) {
+    ReplState repl = old_repl;
+    size_t stk = (i_stk >= 0)
+        ? ((size_t) (repl.stack_size - 1 - i_stk))
+        : ((size_t) -(i_stk + 1));
+    printf("stk: %zu\n", stk);
+    if (!(stk < repl.stack_size)) {
+        warning(stream,
+            "stack is out of bounds: attempt on push index '@%s%zu',"
+            " ignoring push",
+            ((i_stk >= 0) ? "" : "_"),
+            ((i_stk >= 0) ? (size_t) (i_stk) : (size_t) (-i_stk))
+        );
+    } else if (!(repl.stack_size < STACK_LEN)) {
+        warning(stream,
+            "stack overflow: attempt on push index '@%s%zu' (@%zu),"
+            " ignoring push",
+            ((i_stk >= 0) ? "" : "_"),
+            ((i_stk >= 0) ? (size_t) (i_stk) : (size_t) (-i_stk)),
+            ((i_stk >= 0) ? (size_t) (i_stk) : (size_t) (repl.stack_size + i_stk))
+        );
+    } else {
+        repl.stack[repl.stack_size] = repl.stack[stk];
+        repl.stack_size += 1;
+    }
+    return repl;
+}
+
 ReplState shift_by_repl(FILE *stream, const ReplState old_repl, const size_t count) {
     ReplState repl = old_repl;
     if (repl.stack_size < 1) {
@@ -268,6 +300,16 @@ size_t parse_register(
     return reg;
 }
 
+iword parse_stack(
+    const StrView view
+) {
+    assert(view.len > 0 && view.buffer[0] == '@');
+    const iword i_stk = read_inumber(
+        drop_view(view, 1)
+    );
+    return i_stk;
+}
+
 size_t parse_count(
     FILE *stream,
     const StrView view
@@ -320,6 +362,11 @@ ReplState eval_repl(
                 const size_t reg =
                     parse_register(stream, token.text, '!');
                 repl = pop_register_repl(stream, repl, reg);
+            } break;
+            case TK_LOAD_STACK: {
+                const iword stk =
+                    parse_stack(token.text);
+                repl = push_stack_repl(stream, repl, stk);
             } break;
             case TK_SHIFT_BY: {
                 const size_t count =

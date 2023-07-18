@@ -77,7 +77,7 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_KW_X, "x" },
                 { TK_KW_TAIL, "'" },
                 { TK_STORE_REGISTER, "!" },
-                { TK_PUNCTUATION, "@" },
+                { TK_LOAD_STACK, "@" },
                 { TK_BEGIN_COMMENT, "#" },
                 { TK_LOAD_REGISTER, "$" },
                 { TK_KW_INV, "%" },
@@ -121,6 +121,15 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_STORE_REGISTER, "!0_0" },
                 { TK_STORE_REGISTER, "!123___4" },
                 { TK_STORE_REGISTER, "!_3" },
+                { TK_EOF, "" },
+            },
+        }, {
+            .input = "@_\t@0_0\r\x1b@123___4\x1b@_3",
+            .tokens = {
+                { TK_LOAD_STACK, "@_" },
+                { TK_LOAD_STACK, "@0_0" },
+                { TK_LOAD_STACK, "@123___4" },
+                { TK_LOAD_STACK, "@_3" },
                 { TK_EOF, "" },
             },
         }, {
