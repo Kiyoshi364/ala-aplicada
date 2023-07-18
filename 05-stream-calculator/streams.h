@@ -123,7 +123,7 @@ static ZeroStream THE_ZERO_STREAM = {
     .header = {
         .typ = { ZERO_STREAM },
         .len = sizeof(THE_ZERO_STREAM),
-        .data = 0,
+        .fdata = 0.0,
         .data2 = 0,
     },
 };
@@ -132,7 +132,7 @@ static OneStream THE_ONE_STREAM = {
     .header = {
         .typ = { ONE_STREAM },
         .len = sizeof(THE_ONE_STREAM),
-        .data = 1,
+        .fdata = 1.0,
         .data2 = 0,
     },
 };

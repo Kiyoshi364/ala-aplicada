@@ -4,7 +4,7 @@ inline static
 void _onestream_ok(const OneStream os[const static 1]) {
     assert(os->header.typ.e == ONE_STREAM);
     assert(os->header.len == sizeof(OneStream));
-    assert(os->header.data == 1);
+    assert(os->header.fdata == 1.0);
     assert(os->header.data2 == 0);
     assert(os == &THE_ONE_STREAM);
 }

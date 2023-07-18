@@ -4,7 +4,7 @@ inline static
 void _zerostream_ok(const ZeroStream zs[const static 1]) {
     assert(zs->header.typ.e == ZERO_STREAM);
     assert(zs->header.len == sizeof(ZeroStream));
-    assert(zs->header.data == 0);
+    assert(zs->header.fdata == 0.0);
     assert(zs->header.data2 == 0);
     assert(zs == &THE_ZERO_STREAM);
 }
