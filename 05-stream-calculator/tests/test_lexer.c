@@ -92,7 +92,7 @@ int test_lexer_examples(TestCtx ctx) {
                 { TK_PUNCTUATION, "]" },
                 { TK_PUNCTUATION, "{" },
                 { TK_PUNCTUATION, "}" },
-                { TK_PUNCTUATION, "," },
+                { TK_COMMA, "," },
                 { TK_PUNCTUATION, "." },
                 { TK_PUNCTUATION, "<" },
                 { TK_PUNCTUATION, ">" },

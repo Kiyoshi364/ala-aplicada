@@ -45,12 +45,24 @@ void warning(FILE *stream, const char *format, ...) {
 #define REGISTER_COUNT 10
 #define STACK_LEN 0x10
 
+enum ReplFlags {
+    REPL_DEFAULT = 0x00,
+    REPL_DONT_PRINT_STACK = 0x01,
+    REPL_PRINT_REGISTERS = 0x02,
+    REPL_UNUSED_04 = 0x04,
+    REPL_UNUSED_08 = 0x08,
+    REPL_UNUSED_10 = 0x10,
+    REPL_UNUSED_20 = 0x20,
+    REPL_UNUSED_40 = 0x40,
+    REPL_UNUSED_80 = 0x80,
+};
+
 typedef struct {
     Alloc alloc;
     const Stream *reg_list[REGISTER_COUNT];
     const Stream *stack[STACK_LEN];
     size_t stack_size;
-    b8 skip_newline;
+    b8 flags;
 } ReplState;
 
 ReplState push_number_repl(
@@ -342,7 +354,7 @@ ReplState eval_repl(
         && nt.token.type != TK_EOF
     ) {
         const Token token = nt.token;
-        repl.skip_newline = 0;
+        repl.flags = 0;
 
         fprintf(stream, "%s '%"PRIVIEW"'\n",
             TK_NAME(token.type),
@@ -395,7 +407,10 @@ ReplState eval_repl(
                 found_comment = 1;
             } break;
             case TK_SEMI_COLON: {
-                repl.skip_newline = 1;
+                repl.flags = REPL_DONT_PRINT_STACK;
+            } break;
+            case TK_COMMA: {
+                repl.flags = REPL_DONT_PRINT_STACK | REPL_PRINT_REGISTERS;
             } break;
             case TK_ID: {
                 warning(stream,
@@ -434,15 +449,25 @@ void print_repl(
     const ReplState repl,
     const size_t count
 ) {
-    if (repl.skip_newline) {
-        return;
+    if (IS_FLAG_SET(repl.flags, REPL_DONT_PRINT_STACK)) {
+        // Nothing to do
+    } else {
+        for (size_t i = 0; i < repl.stack_size; i += 1) {
+            fprintf(stream, "(@_%zu|@%zu): ",
+                i + 1,
+                repl.stack_size - 1 - i
+            );
+            print_N_Streamln(stream, repl.alloc, repl.stack[i], count);
+        }
     }
-    for (size_t i = 0; i < repl.stack_size; i += 1) {
-        fprintf(stream, "(@_%zu|@%zu): ",
-            i + 1,
-            repl.stack_size - 1 - i
-        );
-        print_N_Streamln(stream, repl.alloc, repl.stack[i], count);
+    if (IS_FLAG_SET(repl.flags, REPL_PRINT_REGISTERS)) {
+        for (size_t i = 0; i < REGISTER_COUNT; i += 1) {
+            const Stream *r = repl.reg_list[i];
+            if (r != NULL && r != (const Stream *) &THE_ZERO_STREAM) {
+                fprintf(stream, "($%zu): ", i);
+                print_Streamln(stream, r);
+            }
+        }
     }
 }
 

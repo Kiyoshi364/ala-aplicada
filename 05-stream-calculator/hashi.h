@@ -51,6 +51,8 @@ typedef u32 b32;
 typedef u64 b64;
 typedef uword bword;
 
+#define IS_FLAG_SET(var, flag) (((var) & (flag)) == (flag))
+
 // char types
 typedef u8 byte;
 
