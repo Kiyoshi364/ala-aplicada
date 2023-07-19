@@ -10,6 +10,16 @@
 
 #define MAX_LINE 0x400
 
+#ifdef DEBUG
+#define LOG(...) fprintf(__VA_ARGS__)
+#else
+static inline void LOG(FILE *stream, ...) { (void) stream; }
+#endif // DEBUG
+
+#ifndef PRINT_COUNT
+#define PRINT_COUNT 5
+#endif // PRINT_COUNT
+
 size_t readln_low(size_t len, byte buffer[len], FILE *stream) {
     size_t i = 0;
     int c = '\0';
@@ -140,7 +150,7 @@ ReplState push_stack_repl(
     size_t stk = (i_stk >= 0)
         ? ((size_t) (repl.stack_size - 1 - i_stk))
         : ((size_t) -(i_stk + 1));
-    printf("stk: %zu\n", stk);
+    LOG(stream, "stk: %zu\n", stk);
     if (!(stk < repl.stack_size)) {
         warning(stream,
             "stack is out of bounds: attempt on push index '@%s%zu',"
@@ -356,7 +366,7 @@ ReplState eval_repl(
         const Token token = nt.token;
         repl.flags = 0;
 
-        fprintf(stream, "%s '%"PRIVIEW"'\n",
+        LOG(stream, "%s '%"PRIVIEW"'\n",
             TK_NAME(token.type),
             STRVIEW(token.text)
         );
@@ -486,8 +496,8 @@ int main(void) {
         // Read
         len = readln_low(ARRAY_SIZE(buffer), buffer, finp);
         assert(len > 0 || feof(finp));
-        fprintf(fout, "D: len = %zu, feof(finp) = %d\n", len, feof(finp));
-        fprintf(fout, "<%.*s>\n", (int) len, buffer);
+        LOG(fout, "D: len = %zu, feof(finp) = %d\n", len, feof(finp));
+        LOG(fout, "<%.*s>\n", (int) len, buffer);
 
         // Eval
         const ReplState next_repl = eval_repl(
@@ -500,7 +510,7 @@ int main(void) {
         );
 
         // Print
-        print_repl(fout, next_repl, 5);
+        print_repl(fout, next_repl, PRINT_COUNT);
 
         // Loop
         repl = next_repl;
