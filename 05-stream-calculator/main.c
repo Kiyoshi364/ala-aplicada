@@ -20,6 +20,10 @@ static inline void LOG(FILE *stream, ...) { (void) stream; }
 #define PRINT_COUNT 5
 #endif // PRINT_COUNT
 
+#ifndef PRINT_TAIL_DEPTH
+#define PRINT_TAIL_DEPTH 0
+#endif // PRINT_TAIL_DEPTH
+
 size_t readln_low(size_t len, byte buffer[len], FILE *stream) {
     size_t i = 0;
     int c = '\0';
@@ -357,6 +361,7 @@ ReplState eval_repl(
 ) {
     b8 found_comment = 0;
     ReplState repl = old_repl;
+    repl.flags = 0;
     NextToken nt = next_token(new_lexer(input));
     while (
         !found_comment
@@ -467,7 +472,7 @@ void print_repl(
                 i + 1,
                 repl.stack_size - 1 - i
             );
-            print_N_Streamln(stream, repl.alloc, repl.stack[i], count);
+            print_N_Streamln(stream, repl.alloc, repl.stack[i], count, PRINT_TAIL_DEPTH);
         }
     }
     if (IS_FLAG_SET(repl.flags, REPL_PRINT_REGISTERS)) {
@@ -475,7 +480,7 @@ void print_repl(
             const Stream *r = repl.reg_list[i];
             if (r != NULL && r != (const Stream *) &THE_ZERO_STREAM) {
                 fprintf(stream, "($%zu): ", i);
-                print_Streamln(stream, r);
+                print_Streamln(stream, r, PRINT_TAIL_DEPTH);
             }
         }
     }

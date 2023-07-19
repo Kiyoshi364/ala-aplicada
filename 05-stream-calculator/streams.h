@@ -76,12 +76,12 @@ const Stream* add_Stream(Alloc alloc, const Stream a[static 1], const Stream b[s
 const Stream* sub_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]);
 const Stream* mul_Stream(Alloc alloc, const Stream a[static 1], const Stream b[static 1]);
 const Stream* inv_Stream(Alloc alloc, const Stream stream[static 1]);
-void print_Stream(FILE* out, const Stream stream[static 1]);
-void print_Streamln(FILE* out, const Stream stream[static 1]);
+void print_Stream(FILE* out, const Stream stream[static 1], const size_t depth);
+void print_Streamln(FILE* out, const Stream stream[static 1], const size_t depth);
 void debug_Stream(FILE* out, const Stream stream[static 1]);
 void debug_Streamln(FILE* out, const Stream stream[static 1]);
-void print_N_Stream(FILE* out, Alloc alloc, const Stream stream[static 1], const size_t count);
-void print_N_Streamln(FILE* out, Alloc alloc, const Stream stream[static 1], const size_t count);
+void print_N_Stream(FILE* out, Alloc alloc, const Stream stream[static 1], const size_t count, const size_t depth);
+void print_N_Streamln(FILE* out, Alloc alloc, const Stream stream[static 1], const size_t count, const size_t depth);
 
 #endif // _STREAMS_H
 
@@ -676,7 +676,7 @@ const Stream* inv_Stream(Alloc alloc, const Stream stream[static 1]) {
     return result;
 }
 
-void print_Stream(FILE* out, const Stream stream[static 1]) {
+void print_Stream(FILE* out, const Stream stream[static 1], const size_t depth) {
     switch (stream->typ.e) {
         case ZERO_STREAM:
         {
@@ -693,52 +693,72 @@ void print_Stream(FILE* out, const Stream stream[static 1]) {
         case SHIFT_STREAM:
         {
             _shiftstream_ok((const ShiftStream *) stream);
-            fprintf(out, "(");
-            print_Stream(out, stream->stream1);
-            fprintf(out, " ");
-            fprintf(out, "^%"PRIuPTR")", (stream->data2) + 1);
+            if (depth == 0) {
+                fprintf(out, "(& ^%"PRIuPTR")", (stream->data2) + 1);
+            } else {
+                fprintf(out, "(");
+                print_Stream(out, stream->stream1, depth-1);
+                fprintf(out, " ");
+                fprintf(out, "^%"PRIuPTR")", (stream->data2) + 1);
+            }
         } break;
         case LAZY_ADD_STREAM:
         {
             _lazyaddstream_ok((const LazyAddStream *) stream);
-            fprintf(out, "(");
-            print_Stream(out, stream->stream1);
-            fprintf(out, " ");
-            print_Stream(out, stream->stream2);
-            fprintf(out, " +)");
+            if (depth == 0) {
+                fprintf(out, "(& & +)");
+            } else {
+                fprintf(out, "(");
+                print_Stream(out, stream->stream1, depth-1);
+                fprintf(out, " ");
+                print_Stream(out, stream->stream2, depth-1);
+                fprintf(out, " +)");
+            }
         } break;
         case LAZY_SUB_STREAM:
         {
             _lazysubstream_ok((const LazySubStream *) stream);
-            fprintf(out, "(");
-            print_Stream(out, stream->stream1);
-            fprintf(out, " ");
-            print_Stream(out, stream->stream2);
-            fprintf(out, " -)");
+            if (depth == 0) {
+                fprintf(out, "(& & -)");
+            } else {
+                fprintf(out, "(");
+                print_Stream(out, stream->stream1, depth-1);
+                fprintf(out, " ");
+                print_Stream(out, stream->stream2, depth-1);
+                fprintf(out, " -)");
+            }
         } break;
         case LAZY_MUL_STREAM:
         {
             _lazymulstream_ok((const LazyMulStream *) stream);
-            fprintf(out, "(");
-            print_Stream(out, stream->stream1);
-            fprintf(out, " ");
-            print_Stream(out, stream->stream2);
-            fprintf(out, " *)");
+            if (depth == 0) {
+                fprintf(out, "(& & -)");
+            } else {
+                fprintf(out, "(");
+                print_Stream(out, stream->stream1, depth-1);
+                fprintf(out, " ");
+                print_Stream(out, stream->stream2, depth-1);
+                fprintf(out, " *)");
+            }
         } break;
         case LAZY_INV_STREAM:
         {
             _lazyinvstream_ok((const LazyInvStream *) stream);
-            fprintf(out, "(");
-            print_Stream(out, stream->stream1);
-            fprintf(out, " %%)");
+            if (depth == 0) {
+                fprintf(out, "(& %%)");
+            } else {
+                fprintf(out, "(");
+                print_Stream(out, stream->stream1, depth-1);
+                fprintf(out, " %%)");
+            }
         } break;
         case STREAMTYPE_COUNT:
         DEFAULT_STREAM_CASE(stream);
     }
 }
 
-void print_Streamln(FILE* out, const Stream stream[static 1]) {
-    print_Stream(out, stream);
+void print_Streamln(FILE* out, const Stream stream[static 1], const size_t depth) {
+    print_Stream(out, stream, depth);
     fprintf(out, "\n");
 }
 
@@ -746,7 +766,7 @@ void debug_Stream(FILE* out, const Stream stream[static 1]) {
     fprintf(out, "{%s, %zu, 0x%016"PRIXPTR", 0x%016"PRIXPTR": ",
         S_NAME(stream->typ.e), stream->len, stream->data, stream->data2
     );
-    print_Stream(out, stream);
+    print_Stream(out, stream, 0xFFFF);
     fprintf(out, "}");
 }
 
@@ -757,7 +777,8 @@ void debug_Streamln(FILE* out, const Stream stream[static 1]) {
 
 void print_N_Stream(FILE* out, Alloc alloc,
     const Stream stream[static 1],
-    const size_t count
+    const size_t count,
+    const size_t depth
 ) {
     if (count > 0) {
         fprintf(out, "%"PRIfPTR, head_Stream(stream));
@@ -769,15 +790,16 @@ void print_N_Stream(FILE* out, Alloc alloc,
     }
 
     fprintf(out, " [tail of ");
-    print_Stream(out, curr);
+    print_Stream(out, curr, depth);
     fprintf(out, "]");
 }
 
 void print_N_Streamln(FILE* out, Alloc alloc,
     const Stream stream[static 1],
-    const size_t count
+    const size_t count,
+    const size_t depth
 ) {
-    print_N_Stream(out, alloc, stream, count);
+    print_N_Stream(out, alloc, stream, count, depth);
     fprintf(out, "\n");
 }
 
