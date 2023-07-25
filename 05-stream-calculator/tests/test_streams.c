@@ -5,6 +5,10 @@
 
 #include "test.h"
 
+#ifndef PRINT_TAIL_DEPTH
+#define PRINT_TAIL_DEPTH 0xFFFF
+#endif // PRINT_TAIL_DEPTH
+
 static inline
 int test_zero(TestCtx ctx) {
     int errs = 0;
@@ -240,9 +244,9 @@ int input_test_not_comm(
         if (this_errs) {
             errs += 1;
             fprintf(ctx.out, "displaying expected stream:\n");
-            print_N_Streamln(ctx.out, ctx.alloc, expected, depths[i]);
+            print_N_Streamln(ctx.out, ctx.alloc, expected, depths[i], PRINT_TAIL_DEPTH);
             fprintf(ctx.out, "displaying result stream:\n");
-            print_N_Streamln(ctx.out, ctx.alloc, result, depths[i]);
+            print_N_Streamln(ctx.out, ctx.alloc, result, depths[i], PRINT_TAIL_DEPTH);
         }
     }
     return errs;
@@ -316,9 +320,9 @@ int input_test_comm(
             if (this_errs) {
                 errs += 1;
                 fprintf(ctx.out, "displaying expected stream:\n");
-                print_N_Streamln(ctx.out, ctx.alloc, expected, depths[i]);
+                print_N_Streamln(ctx.out, ctx.alloc, expected, depths[i], PRINT_TAIL_DEPTH);
                 fprintf(ctx.out, "displaying result stream:\n");
-                print_N_Streamln(ctx.out, ctx.alloc, result, depths[i]);
+                print_N_Streamln(ctx.out, ctx.alloc, result, depths[i], PRINT_TAIL_DEPTH);
             }
         }
     }
