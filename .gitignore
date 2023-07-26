@@ -9,6 +9,8 @@ temp/
 # latex stuff
 *.aux
 *.log
+*.bbl
+*.blg
 
 # zig stuff
 zig-cache/

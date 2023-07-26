@@ -1,0 +1,839 @@
+\documentclass{article}
+
+\usepackage[a4paper]{geometry}
+
+\usepackage[brazil]{babel}
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{hyperref}
+
+\usepackage{multicol}
+
+% noindent EVERYWHERE
+\setlength{\parindent}{0pt}
+
+\newcommand{\To}{\Rightarrow}
+
+\newcommand{\head}{\emph{head}}
+\newcommand{\tail}{\emph{tail}}
+\newcommand{\Head}{\emph{Head}}
+\newcommand{\Tail}{\emph{Tail}}
+
+\newcommand{\coisa}[1]{\textbf{coisa#1}}
+
+\newcommand{\note}[1]{\textbf{Nota:} \textit{#1}}
+
+\newcommand{\Num}{\mathcal{N}}
+
+\newcommand{\ins}[1]{\langle #1 \rangle}
+\newcommand{\inv}[1]{{#1}^{-1}}
+
+\newcommand{\dre}{119025937}
+\newcommand{\hashi}{Daniel Kiyoshi Hashimoto Vouzella de Andrade}
+
+\title{Calculadora de Streams}
+\author{\hashi{} -- \dre{}
+}
+\date{Julho 2023}
+
+\begin{document}
+\maketitle
+
+\section{Por quê Streams?}
+
+Streams são sequências infinitas de \coisa{s}
+\[
+    (a, \; b, \; c, \; d, \; e, \; f, \; \dots)
+\]
+
+Aparecem em Computação:
+\begin{itemize}
+    \item Stream de dados
+    \begin{itemize}
+        \item Vídeo
+        \item Áudio
+        \item \dots
+    \end{itemize}
+
+    \item Processamento de Sinais
+    \begin{itemize}
+        \item Filtros, conversores, \dots
+    \end{itemize}
+\end{itemize}
+
+Aparecem em Matemática:
+\begin{itemize}
+    \item Séries de Potência/Polinômios
+    \[
+        a_0 \cdot x^0 + a_1 \cdot x^1 + a_2 \cdot x^2 + \cdots
+    \]
+    \item Série de Taylor
+    \[
+        f(x) =
+        f(a)
+        + \frac{f'(a) \cdot (x-a)^1}{1!}
+        + \frac{f''(a) \cdot (x-a)^2}{2!}
+        + \cdots
+    \]
+    \item Problemas de contagem (sequências aparecem como solução)
+    \begin{itemize}
+        \item Fibonacci
+        \[
+            0, \; 1, \; 1, \; 2, \; 3, \; 5, \; 8, \; \dots
+        \]
+        \item Números Triangulares
+        \[
+            1, \; 3, \; 6, \; 10, \; \dots, \; \frac{n \cdot (n+1)}{2}, \; \dots
+        \]
+    \end{itemize}
+\end{itemize}
+
+\section{O que são Streams?}
+
+Matematicamente,
+uma Stream de \(A\) é um elemento do conjunto:
+\[
+    A^\omega := \{
+        S \;;\;
+        S \in \{ 0, \; 1, \; 2, \; \dots \} \to A
+    \}
+\]
+ou seja, funções de \(\mathbb{N}\)
+para seus elementos de \(A\).
+
+Mas podemos fingir que são uma `lista infinita' de \(A\)s:
+\[
+    S := (s_0, \; s_1, \; s_2, \; s_3, \; s_4, \; s_5, \; \dots)
+\]
+
+\subsection{O que podemos fazer com Streams?}
+
+Temos algumas operações úteis:
+\begin{itemize}
+    \item Indexar:
+        pedir o \(i\)-ésimo elemento da stream
+    \begin{align*}
+        S[i] &:= s_i
+    \end{align*}
+
+    \emph{Quando \(i = 0\) chamamos a operação de \head{}.}
+    \item Tail/Derivar/Shift Left:
+        jogar o primeiro elemento \coisa{} fora
+    \begin{align*}
+        S' &:= (s_1, \; s_2, \; s_3, \; s_4, \; s_5, \; \dots)
+        \\ \\
+        S'[i] &:= S[i+1]
+    \end{align*}
+
+    \item Cons/Integrar/Shift Right:
+        colocar uma \coisa{} no início da Stream
+    \begin{align*}
+        (a : S) := (a, \; s_0, \; s_1, \; s_2, \; s_3, \; \dots)
+        \\ \\
+        \begin{cases}
+            (a : S)[0] := a \\
+            (a : S)[i] := S[i-1]
+        \end{cases}
+    \end{align*}
+\end{itemize}
+
+\subsection{Como definimos Streams?}
+
+Podemos usar \emph{Equações Diferenciais}
+para definir Streams.
+
+Para isso, basta dizer quem é
+\Head{} e \Tail{} de \(S\).
+
+Alguns exemplos:
+\begin{multicols}{2}
+\begin{itemize}
+    \item ``Sempre'' \(a\):
+    \begin{align*} \begin{cases}
+        S[0] &= a \\
+        S'   &= S
+    \end{cases} \end{align*}
+
+    \item ``Sempre'' \(a\) e \(b\):
+    \begin{align*} \begin{cases}
+        S [0] &= a \\
+        S'[0] &= b \\
+        S''   &= S
+    \end{cases} \end{align*}
+
+    \item ``Sempre'' \(a\) e \(b\) (versão 2):
+    \begin{align*} \begin{cases}
+        S[0] &= a \\
+        T[0] &= b \\
+        S'   &= T \\
+        T'   &= S
+    \end{cases} \end{align*}
+
+    \item Os pares de \(S\):
+    \begin{align*} \begin{cases}
+        par(S)[0] &= S[0] \\
+        par(S)'   &= par(S'')
+    \end{cases} \end{align*}
+
+    \item Os ímpares de \(S\):
+    \begin{align*} \begin{cases}
+        impar(S)[0] &= S[1] \\
+        impar(S)'   &= impar(S'')
+    \end{cases} \end{align*}
+
+    \item Zip de \(S\) e \(T\):
+    \begin{align*} \begin{cases}
+        zip(S, T)[0] &= S[0] \\
+        zip(S, T)'   &= zip(T, S')
+    \end{cases} \end{align*}
+
+    \item Double de `S`:
+    \begin{align*} \begin{cases}
+        double(S)[0] &= S[0] \\
+        double(S)[1] &= S[0] \\
+        double(S)''  &= double(S')
+    \end{cases} \end{align*}
+\end{itemize}
+\end{multicols}
+
+Com essas definições,
+podemos ir calculando \head{}s e \tail{}s
+e começar a montar a lista infinita.
+
+E após algumas tentativas as vezes conseguimos
+adivinhar a ``cara'' dessas Streams.
+
+Assim são o início dessas streams:
+\begin{multicols}{2}
+\begin{itemize}
+    \item ``Sempre'' \(a\):
+    \[
+        (a, \; a, \; a, \; \dots)
+    \]
+
+    \item ``Sempre'' \(a\) e \(b\):
+    \[
+        (a, \; b, \; a, \; b, \; a, \; b, \; \dots)
+    \]
+
+    \item Pares de \(S\):
+    \[
+        (s_0, \; s_2, \; s_4, \; s_6, \; \dots)
+    \]
+
+    \item Impares de \(S\):
+    \[
+        (s_1, \; s_3, \; s_5, \; s_7, \; \dots)
+    \]
+
+    \item Zip de \(S\) e \(T\):
+    \[
+        (s_0, \; t_0, \; s_1, \; t_1, \; s_2, \; t_2, \; \dots)
+    \]
+
+    \item Double de \(S\):
+    \[
+        (s_0, \; s_0, \; s_1, \; s_1, \; s_2, \; s_2, \; \dots)
+    \]
+\end{itemize}
+\end{multicols}
+
+\subsection{Equivalência de Streams com Autômatos}
+
+Um autômato é uma quadrupla \((Q, q_0, out, next)\),
+onde:
+\begin{itemize}
+    \item \(Q\): Conjunto de Estados (possívelmente infinito)
+    \item \(q_0\): O primeiro estado
+    \item \(out\): Função \(Q \to A\)
+    \item \(next\): Função \(Q \to Q\)
+\end{itemize}
+
+A ideia é que cada estado
+gera um elemento (usando \(out\)) e
+\(next\) diz o resto da Stream.
+
+\(out\) está relacionada com \head{} e
+\(next\) está relacionada com \tail{}.
+
+Usando essa ideia,
+podemos pegar uma Stream
+\(S \in A^\omega\) e
+fazer um autômato equivalente
+\[
+    (S, s_0, head, tail)
+\]
+onde:
+\begin{align*}
+    s_0     &:= S[0] \\
+    head(T) &:= T[0] \\
+    tail(T) &:= T'
+\end{align*}
+
+\section{Streams de Números: um caso especial}
+
+Daqui para frente vamos usar \emph{Números Racionais}
+\(\Num\) no lugar de \(A\).
+Mas vai funcionar com qualquer outro \emph{Corpo}.
+
+\subsection{Operações básicas}
+
+\subsubsection{Insersão}
+
+Podemos levar elementos de \(\Num\)
+em elementos de \(\Num^\omega\):
+\begin{align*} \begin{cases}
+    \ins{n}[0] &:= n \\
+    \ins{n}'   &:= \ins{0}
+\end{cases} \end{align*}
+
+Intuitivamente:
+\begin{align*}
+    \ins{n} := (n, \; 0, \; 0, \; 0, \; \dots)
+\end{align*}
+
+\subsubsection{Soma}
+
+Podemos somar dois \(\Num^\omega\),
+\(S\) e \(T\),
+resultando em outro \(\Num^\omega\):
+\begin{align*} \begin{cases}
+    (S + T)[0] &:= S[0] + T[0] \\
+    (S + T)'   &:= (S' + T')
+\end{cases} \end{align*}
+
+Intuitivamente:
+\begin{align*}
+    S + T := (s_0 + t_0, \; s_1 + t_1, \; s_2 + t_2, \; \dots)
+\end{align*}
+
+Observe que se ``somarmos'' com um \(n \in \Num\):
+\begin{align*}
+    \ins{n} + S := (n + s_0, \; s_1, \; s_2, \; \dots)
+\end{align*}
+
+\subsubsection{Produto}
+
+Podemos multiplicar dois \(\Num^\omega\),
+\(S\) e \(T\),
+resultando em outro \(\Num^\omega\):
+\begin{align*} \begin{cases}
+    (S \times T)[0] &:= S[0] \cdot T[0] \\
+    (S \times T)'   &:= (\ins{S[0]} \times T') + (S' \times T)
+\end{cases} \end{align*}
+
+Esse é menos intuitivo,
+mas fica parecido com
+a propriedade distributiva da multiplicação de números:
+\begin{align*}
+    S \times T :=
+    (s_0 \cdot t_0,
+    \; s_1 \cdot t_0 + s_0 \cdot t_1,
+    \; s_0 \cdot t_2 + s_1 \cdot t_1 + s_2 \cdot t_0,
+    \; \dots)
+\end{align*}
+
+Observe que se ``multiplicarmos'' com um \(n \in \Num\):
+\begin{align*}
+    \ins{n} \times S := (n \cdot s_0, \; n \cdot s_1, \; n \cdot s_2, \; \dots)
+\end{align*}
+
+\subsection{Semelhança com Polinômios (Stream X)}
+
+No geral, a Stream
+\[
+    S = (s_0, \; s_1, \; s_2, \; \dots)
+\]
+é muito parecida com o polinômio
+\[
+    P(x) = s_0 \; x^0 + s_1 \; x^1 + s_2 \; x^2 + \cdots
+\]
+
+Temos uma Stream especial,
+vamos chamar de \(X \in \Num^\omega\),
+que façam Streams mais parecidas com polinômios?
+Queremos algo assim:
+\begin{align*}
+    \ins{s_0} &= (s_0, \; 0, \; 0, \; \dots) \\
+    \ins{s_1} \times X &= (0, \; s_1, \; 0, \; \dots) \\
+    \ins{s_2} \times X \times X &= (0, \; 0, \; s_2, \; \dots) \\
+    \vdots&
+\end{align*}
+
+Temos!
+\[
+    X := (0, \; 1, \; 0, \; 0, \; 0, \; \dots)
+\]
+
+Observe que multiplicar por \(X\)
+é equivalente a ``empurar'' a Stream
+toda para direita
+e por um 0 como primeiro elemento:
+\[
+    S \times X
+    = (0, \; s_0, \; s_1, \; s_2, \; s_3, \; \dots)
+    = (0 : S)
+\]
+
+\subsection{Recorrência Linear}
+
+Podemos usar Streams para resolver Recorrências Lineares.
+
+O exemplo clássico é a recorrência de Fibonacci:
+\begin{align*}
+    F[0] &:= 0 \\
+    F[1] &:= 1 \\
+    F[n] &:= F[n-1] + F[n-2]
+\end{align*}
+
+Podemos fazer uma versão ``recursiva'':
+\begin{align*}
+    F &:=
+        (0 + \ins{1} \times X)
+        + (F \times X)
+        + (F \times X \times X) \\
+    &:=
+        (\ins{1} \times X)
+        + (F \times X)
+        + (F \times X \times X) \\
+    &:=
+        X
+        + (F \times X)
+        + (F \times X \times X) \\
+\end{align*}
+
+No desenho ficaria algo como:
+\[
+    \begin{array}{ccccccc}
+     & (  0, &   1, &   0, &   0, &   0, & \dots) \\
+    +& (  0, & f_0, & f_1, & f_2, & f_3, & \dots) \\
+    +& (  0, &   0, & f_0, & f_1, & f_2, & \dots) \\ \hline
+    =& (f_0, & f_1, & f_2, & f_3, & f_4, & \dots) \\
+    \end{array}
+\]
+
+No olho, podemos descobrir que:
+\begin{align*}
+    f_0 &:= 0 \\
+    f_1 &:= 1 + f_0 \\
+    f_2 &:= f_0 + f_1 \\
+    &\quad\vdots
+\end{align*}
+
+Mas também podemos resolver algebricamente:
+\begin{align*}
+    &F = X + F \times X + F \times X \times X \\
+    &F = X + F \times (X + X \times X) \\
+    &F - F \times (X + X \times X) = X \\
+    &F \times (1 - X - X \times X) = X \\
+\end{align*}
+
+Agora falta ``jogar aquilo para o outro lado''.
+\[
+    F = \frac{X}{1 - X - X \times X}
+\]
+
+E pronto!
+
+Mas como funciona essa \emph{matemágica}?
+
+\subsection{Inversa de uma Stream}
+
+Queremos uma operação de ``inversa''
+com a seguinte propriedade:
+\[
+    S \times \inv{S} = \ins{1} = \inv{S} \times S
+\]
+
+A seguinte definição funciona:
+\begin{align*} \begin{cases}
+    (\inv{S})[0] &:= \frac{1}{S[0]} \\
+    (\inv{S})'   &:= \ins{\frac{1}{S[0]}} \times S' \times \inv{S}
+\end{cases} \end{align*}
+
+Observe que \(\inv{S}\) não está definida
+quando \(S[0] = 0\).
+
+\iffalse
+\section{Streams Racionais}
+
+Com isso completamos o que precisamos para
+definir \textbf{Streams Racionais}.
+
+Uma \textbf{Stream Racional} \(A^\omega\) é uma generalização
+da \textbf{Streams de Números} da seção anterior,
+podemos:
+\begin{itemize}
+    \item Somar
+    \item Multiplicar
+    \item Inverter
+\end{itemize}
+\note{Genericamente só pedimos que \(A\) forme um Corpo.}
+
+\subsection{Circuitos}
+\fi
+
+\section{A calculadora}
+
+A calculadora é um programa iterativo.
+Ela recebe comandos na notação polonesa reversa,
+em outras palavras,
+recebe os argumentos e depois a operação.
+
+Por exemplo:
+\[
+    13 \; 2 + 4 \; 6 * \; -
+\]
+é equivalente à
+\[
+    (13 + 2) - (4 * 6)
+\]
+
+Como ela só trabalha com streams,
+números são automaticamente inseridos em streams.
+
+O código foi desenvolvido em \texttt{C},
+e única dependência é um compilador de \texttt{C}.
+Foi usado o \texttt{gcc} na versão \texttt{11.3.0}.
+
+Existem alguns exemplos em \texttt{examples.txt}.
+O arquivo é uma entrada válida para a calculadora.
+
+\subsection{Como rodar}
+
+Existe um script para compilar e rodar o programa:
+\texttt{compile\_run.sh}.
+O programa é pequeno o suficiente para
+compilar o programa logo antes de executar
+não ser um problema.
+
+Para a compilação ele pode receber dois valores
+que configuram a saída da calculadora:
+\begin{itemize}
+    \item \texttt{-DPRINT\_COUNT=<N>}: padrão 5. \par
+    Diz quantos elementos da Stream serão mostrados
+    quando ela mostra as Streams que estão na pilha.
+    \item \texttt{-DPRINT\_TAIL\_DEPTH=<N>}: padrão 0. \par
+    Diz o quão profundo o programa tenta ao mostrar a calda da stream
+    quando ela mostra as Streams que estão na pilha.
+    \item \texttt{-DDEBUG}\par
+    Liga alguns prints extras para ajudar a debugar a calculadora.
+\end{itemize}
+
+Exemplo, usando as flags:
+\begin{verbatim}
+$ ./compile_run.sh -DPRINT_COUNT=10 -DPRINT_TAIL_DEPTH=2
+\end{verbatim}
+
+Geralmente não é necessário se preocupar com isso.
+
+O programa pode ser encerrado com um EOF
+(em linux \texttt{Ctrl-D}).
+Não tem um comando \texttt{exit} ou similar que encerra a calculadora.
+
+\subsubsection{Testes}
+
+Existe uma pequena bateria de testes.
+Para rodar basta executar:
+\texttt{run-tests.sh}.
+
+Os arquivos do teste estão na pasta \texttt{tests/}.
+
+\subsection{Sintaxe e Comandos}
+
+A sintaxe é permissiva,
+isso quer dizer que:
+na dúvida,
+os ``erros'' serão ignorados
+ou silenciosamente convertidos para coisas válidas.
+
+Isso não é uma coisa ideal,
+mas contorna alguns problemas e
+permite ``focar no que importa''
+(fazer a calculadora funcionar).
+
+Além disso, ela é case-insensitive,
+ou seja, os seguintes nomes são equivalentes:
+\begin{multicols}{4}
+\begin{itemize}
+    \item \texttt{add}
+    \item \texttt{Add}
+    \item \texttt{aDd}
+    \item \texttt{ADD}
+\end{itemize}
+\end{multicols}
+
+\subsubsection{Números}
+
+Ao ler um número, converte ele para stream e o empilha.
+
+Números começam com um underscore (\texttt{\_}) ou digito,
+aceita vários deles e opcionalmente um ponto (\texttt{.}) e
+mais underscore (\texttt{\_}) ou digito.
+
+Se o número começa com underscore (\texttt{\_})
+é um número negativo.
+
+Exemplos:
+\begin{multicols}{2}
+\begin{itemize}
+    \item \texttt{0}: \(0\)
+    \item \texttt{5}: \(5\)
+    \item \texttt{\_2}: \(-2\)
+    \item \texttt{10\_000\_123.456\_7}: \(10000123.4567\)
+    \item \texttt{\_32.5}: \(-32.5\)
+    \item \texttt{\_}: \(0\)
+\end{itemize}
+\end{multicols}
+
+\subsubsection{Operações de Streams}
+
+As operações retiram streams da pilha
+e empilha o resultado na pilha.
+
+Se não tem argumentos o suficiente na pilha,
+não fazem nada.
+
+Geralmente, o comando pode ser executado
+usando um símbolo ou um nome.
+
+\paragraph{Soma}
+
+Pode ser invocada com \texttt{+} ou \texttt{add}.
+
+\paragraph{Subtração}
+
+Pode ser invocada com \texttt{-} ou \texttt{sub}.
+
+\paragraph{Multiplicação}
+
+Pode ser invocada com \texttt{*} ou \texttt{mul}.
+
+\paragraph{Inversa}
+
+Pode ser invocada com \texttt{\%} ou \texttt{inv}.
+
+\paragraph{Derivada/Shift Left}
+
+Pode ser invocada com \texttt{\textquotesingle{}} ou \texttt{tail}.
+
+\paragraph{Integral/Shift Right}
+
+Essa operação é equivalente a multiplicar
+por \(X^n\), ou seja, \(X\) multiplicado por ele mesmo \(n\) vezes.
+Pode ser invocada com \texttt{\textasciicircum{}n},
+onde \texttt{n} é um inteiro (preferencialmente maior que 0).
+
+\paragraph{Stream X}
+
+Esse é um atalho para empilhar a stream \(X\).
+Pode ser invocada com \texttt{x}.
+
+\note{Prefira usar \texttt{\textasciicircum{}n}
+no lugar de várias multiplicações por \texttt{x}.
+O \emph{Shift Right} tem algumas otimizações
+que economizam memória e tempo de execução.
+Mas para exemplos pequenos, não faz muita diferença.}
+
+\subsubsection{Utilitários da calculadora}
+\paragraph{Escreve em Registrador}
+
+A calculadora possui 10 registradores,
+numerados de 0 até 9.
+Pode escrever em um deles usando \texttt{!r},
+onde \texttt{r} é um inteiro (preferencialmente no intervalo \([0 , 9]\)).
+
+Escrever em um registrador pode ser usado
+para jogar o topo da pilha fora.
+
+\paragraph{Le do Registrador}
+
+Pode empilhar o conteúdo de um registrador usando \texttt{\$r},
+onde \texttt{r} é um inteiro (preferencialmente no intervalo \([0 , 9]\)).
+
+Os registradores começam inicializados com a Stream \(\ins{0}\).
+
+\paragraph{Copia da Pilha}
+
+Pode copiar um valor da pilha para o topo dela usando \texttt{@s},
+onde \texttt{s} é um inteiro (dentro do tamanho da pilha,
+aceita números negativos).
+
+\subsubsection{Outros}
+\paragraph{Comentários}
+
+Um comentário começa com \texttt{\#} e vai até o fim da linha.
+
+\paragraph{Não mostra pilha}
+
+Se a linha termina com \texttt{;},
+não mostra a pilha.
+
+Isso pode ser útil para não ficar reavaliando
+os valores das Streams empilhadas.
+
+\paragraph{Mostra registradores}
+
+Se a linha termina com \texttt{;},
+não mostra a pilha,
+mas imprime os registradores que não possuem
+a Stream \(\ins{0}\).
+
+\subsubsection{Ignorados}
+
+Outros símbolos e palavras
+não mapeados são ignorados.
+
+Exemplos:
+\begin{multicols}{3}
+\begin{itemize}
+    \item \texttt{[}
+    \item \texttt{]}
+    \item \texttt{\{}
+    \item \texttt{\}}
+    \item \texttt{\textasciitilde}
+    \item \texttt{lalala}
+    \item \texttt{arroz}
+    \item \texttt{addi}
+    \item \texttt{c}
+\end{itemize}
+\end{multicols}
+
+\subsection{Alguns detalhes de implementação}
+
+\subsubsection{Limites arbitrários que podem ser alterados}
+\begin{itemize}
+    \item Limite de registradores: 10
+    \item Limite de tamanho da pilha: 16 (0x10)
+    \item Limite de tamanho de uma linha da entrada: 1024 (0x400)
+\end{itemize}
+
+\subsubsection{Arquitetura}
+
+A calculadora possui 3 arquivos principais:
+\texttt{streams.h}, \texttt{lexer.h} e \texttt{main.c}.
+
+\paragraph{\texttt{streams.h}}
+
+Aqui está toda a implementação de Streams de floats.
+Streams são representadas como ponteiros para blocos imutáveis
+de memória.
+
+Elas tem uma ``tipagem dinâmica'',
+um campo que diz ``qual tipo ela é''.
+Isso permite tratar tudo como se ``fosse a mesma coisa''
+e algumas otimizações,
+mas a cada operação tem que \emph{ver} qual
+``tipo'' cada coisa é e isso é meio chato
+(nome disso é \emph{dynamic dispatch}).
+
+\paragraph{\texttt{lexer.h}}
+
+Essa parte ``tokeniza'' a entrada:
+lê e segmenta a entrada
+para um formato mais fácil do
+programa compreender (\emph{tokens}).
+
+\paragraph{\texttt{main.c}}
+
+É a ``cola'' de tudo:
+recebe a entrada,
+passa para o Lexer,
+interpreta os \emph{tokens},
+realiza as operações de Streams.
+
+\subsubsection{Possíveis Melhorias}
+\paragraph{Reuso de memória}
+
+Esse programa só aloca memória indefinidamente,
+nunca se preoculpa em ``devolvê-la'' ou reutilizá-la.
+Em teoria, apenas uma stream \emph{não-trivial}
+sendo exibida várias vezes na tela,
+pode causar um estouro de memória.
+
+Mas na prática isso não é tão problemático assim,
+uma Stream ocupa apenas \textbf{32 bytes}
+mais uma memória compartilhada para cada
+Stream que ela depende
+(uma soma depende de duas outras streams,
+por exemplo).
+Dessa forma, \((\ins{0} + (\ins{0} * \ins{0}))\)
+ocuparia \(\mathbf{32 \cdot 3 = 96} \textbf{ bytes}\)
+se compartilhasse todos os \(\ins{0}\)
+e não simplificasse a conta para \(\ins{0}\).
+
+\paragraph{Double dispatch}
+
+As vezes é possível simplificar as streams
+usando propriedades conhecidas, como:
+\begin{itemize}
+    \item \(\ins{a} + \ins{b} \To \ins{a + b}\)
+    \item \(\ins{a} \times \ins{b} \To \ins{a \cdot b}\)
+    \item \((A \times B) + (A \times C) \To A \times (B + C)\)
+    \item \((A \times X) \times X \To A \times X^2\)
+        \par\note{\(A \times X^2\) tem uma representação melhor
+        do que \(A \times X \times X\),
+        por isso existe operação \texttt{Shift Right}.}
+    \item \((A \times X) + (B \times X^2)
+        \To (A + (B \times X)) \times X\)
+    \item \(\cdots\)
+\end{itemize}
+
+\paragraph{Mais ``Tipos'' de Streams}
+
+Existem outras representações específicas de Streams
+que podem ser úteis.
+Algumas ideias:
+\begin{itemize}
+    \item \texttt{Loop(L, i)}:
+        guarda uma lista de elementos \texttt{L} e
+        um índice \texttt{i}: \par
+        \Head{} é \texttt{L[i]} e
+        \Tail{} é \texttt{Loop(L, (i+1) \% len(L))}.
+    \item \texttt{Autom(L, i, r)}:
+        guarda uma lista de elementos \texttt{L},
+        dois índices \texttt{i} e \texttt{r}: \par
+        \Head{} é \texttt{L[i]} e
+        \Tail{} é \texttt{if i+1 < len(L)
+            then
+                Autom(L, i+1, r)
+            else
+                Autom(L, r, r)}.
+
+        Deve ser valer a equivalencia:
+        \texttt{Loop(L, i) = Autom(L, i, 0)}.
+
+        \note{Não foi provado,
+        mas acredito que os Autômatos
+        sempre podem ser transformados
+        em uma sequência de elementos
+        com uma indicação para qual elemento
+        ela deve recomeçar logo depois de chegar ao fim
+        (um desenho agora seria muito bom).}
+    \item \textbf{Alguma representação mágica de Razão de Polinômios}:
+        \par Como \textbf{Streams Racionais} podem ser
+        representadas como Razões de Polinômios,
+        talvez tenha alguma forma interessante de
+        se calcular \Head{} e \Tail{} a partir disso.
+
+        Talvez isso tenha alguma representação interessante
+        usando duas listas
+        (uma para a parte ``de cima'' e
+        outra para a parte ``de baixo'' da razão).
+\end{itemize}
+
+\paragraph{Lexer}
+
+Algumas entradas não esperadas quebram o Lexer.
+Geralmente elas são não-letras e não-digitos,
+acentos/letras com acentos e caracteres de outras línguas.
+
+\newpage
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{relatorio}
+
+\end{document}
